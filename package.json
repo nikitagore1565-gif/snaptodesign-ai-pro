@@ -1,0 +1,12 @@
+{
+  "name": "snaptodesign-ai-pro",
+  "version": "9.6.0",
+  "description": "SnapToDesign AI Pro",
+  "main": "SnapToDesign-BACKEND-FINAL-V9.6.js",
+  "scripts": {
+    "start": "node SnapToDesign-BACKEND-FINAL-V9.6.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
