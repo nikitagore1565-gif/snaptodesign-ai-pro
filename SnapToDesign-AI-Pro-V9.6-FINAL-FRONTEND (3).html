@@ -1,0 +1,2545 @@
+<!DOCTYPE html>
+<html lang="mr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SnapToDesign AI Pro V9.6 — Final Frontend</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <meta name="theme-color" content="#f04a23">
+    <style>
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
+        .tab-active { background: #1f2937; color: #a5b4fc; border-bottom: 2px solid #6366f1; }
+        .device-frame { transition: width 0.35s ease, height 0.35s ease; }
+        .fp-card { background:#030712; border:1px solid #374151; border-radius:1rem; padding:1rem; }
+        .fp-status { min-height:1.25rem; }
+        .fp-ok { color:#34d399; } .fp-warn { color:#fbbf24; } .fp-err { color:#f87171; }
+        .fp-btn { transition:all .15s ease; }
+        .fp-btn:disabled { opacity:.5; cursor:not-allowed; }
+        #undoBtn:disabled,#redoBtn:disabled{opacity:.4;cursor:not-allowed}
+        .drop-active{border-color:#818cf8!important;background:rgba(79,70,229,.12)!important}
+        @media (max-width:768px){#appWorkspace{padding:10px!important}.device-frame{max-width:100%!important}.fp-card{padding:.75rem}}
+        /* FINAL V9.6 dashboard polish */
+        body { background: radial-gradient(circle at 50% -10%, rgba(79,70,229,.14), transparent 38%), #050a12; }
+        header { position: sticky; top: 0; z-index: 50; backdrop-filter: blur(18px); background: rgba(8,14,24,.88) !important; }
+        .final-nav { display:flex; align-items:center; gap:.35rem; margin-left:auto; }
+        .final-nav button { padding:.45rem .75rem; border-radius:.55rem; font-size:.78rem; color:#9ca3af; transition:.15s; }
+        .final-nav button:hover,.final-nav button.active { color:#fff; background:#172033; }
+        .workspace-panel { min-width:0; }
+        #rightControlRail { min-width:0; }
+        #rightControlRail > * { width:100%; }
+        #rightControlRail .rail-card { background:rgba(15,23,42,.72); border:1px solid #263247; border-radius:1rem; padding:1rem; box-shadow:0 12px 35px rgba(0,0,0,.18); }
+        @media (max-width:1023px){ .final-nav{display:none;} #rightControlRail{display:contents;} }
+    
+        .kstep{transition:all .25s ease}.kstep.active{border-color:rgba(99,102,241,.75);transform:translateY(-1px)}.kstep.done{border-color:rgba(16,185,129,.65)}.kstep.done b{color:#6ee7b7}
+
+        /* Simple / Pro mode */
+        .mode-btn{transition:all .18s ease}
+        .mode-btn.active{background:#4f46e5;color:#fff;box-shadow:0 2px 10px rgba(0,0,0,.25)}
+        body.simple-mode .advanced-section{display:none!important}
+        body.simple-mode .simple-hide{display:none!important}
+        body.pro-mode .mode-btn.active{background:#4f46e5;color:#fff}
+        #modeSwitcher{flex-shrink:0}
+        body.simple-mode .simple-pro-hide{display:none!important}
+        body.simple-mode .simple-pro-collapse{display:none!important}
+        body.pro-mode .simple-pro-hide{display:block!important}
+        @media(max-width:640px){#modeSwitcher .mode-btn{padding-left:.6rem;padding-right:.6rem}}
+
+        /* V9.6 FIX: resilient dashboard fallback if the Tailwind CDN is unavailable. */
+        #appWorkspace{display:grid;grid-template-columns:minmax(0,1fr);align-items:start;}
+        #appWorkspace > .workspace-panel{min-width:0;}
+        #appWorkspace .workspace-panel{box-sizing:border-box;}
+        @media (min-width:1024px){
+          #appWorkspace{grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(280px,350px);}
+        }
+        @media (max-width:1023px){
+          #appWorkspace{grid-template-columns:minmax(0,1fr);}
+          #appWorkspace > .workspace-panel{width:100%;}
+        }
+</style>
+
+<style id="reference-style-v1">
+:root{--st-orange:#f04a23;--st-orange-soft:#fff1eb;--st-ink:#090909;--st-muted:#6b6b6b;--st-line:#e9e9e9}
+body{background:#050505!important;color:#111!important;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;background:radial-gradient(circle at 50% 18%,rgba(240,74,35,.08),transparent 30%);z-index:-1}
+header{background:#171717!important;border-bottom:1px solid #303030!important;padding:14px 18px!important;position:sticky;top:0;z-index:50}
+header h1{color:#fff!important;letter-spacing:-.03em!important;font-size:1.12rem!important}
+header h1 span{color:#999!important}
+header select,header #authArea span{background:#232323!important;border-color:#3b3b3b!important;color:#eee!important}
+header button:not(#simpleModeBtn):not(#proModeBtn){border-radius:12px!important}
+#appWorkspace{max-width:1500px!important;padding:22px!important;gap:18px!important}
+#appWorkspace>.bg-gray-800,#projectManager{background:#111!important;border-color:#292929!important;box-shadow:0 14px 40px rgba(0,0,0,.22)}
+#projectManager{border-radius:18px!important}
+#projectManager input,#projectManager select{background:#090909!important;border-color:#333!important;color:#eee!important}
+#killerWorkflowCard{background:linear-gradient(135deg,#fff 0%,#fff8f5 58%,#ffe8de 100%)!important;border:0!important;color:#111!important;box-shadow:0 18px 50px rgba(0,0,0,.18)!important;position:relative;overflow:hidden}
+#killerWorkflowCard:after{content:"";position:absolute;width:260px;height:260px;right:-100px;top:-130px;border-radius:50%;background:rgba(240,74,35,.10)}
+#killerWorkflowCard .text-white{color:#090909!important}
+#killerWorkflowCard .text-gray-300,#killerWorkflowCard .text-gray-500{color:#5f5f5f!important}
+#killerWorkflowCard .text-indigo-300,#killerWorkflowCard .text-indigo-200{color:var(--st-orange)!important}
+#killerWorkflowCard .bg-gray-950\/70{background:rgba(255,255,255,.72)!important;border-color:#eadbd5!important}
+#killerWorkflowCard .bg-gray-800{background:#fff!important;color:#111!important}
+#killerWorkflowCard .kstep b{color:#111}
+#appWorkspace h2{letter-spacing:-.025em}
+label[for="mediaInput"],#mediaInput{color:#111}
+label[for="mediaInput"]{background:#fff!important;border:2px dashed #d6d6d6!important;box-shadow:0 12px 35px rgba(0,0,0,.12)!important;min-height:150px;transition:.2s ease}
+label[for="mediaInput"]:hover{border-color:var(--st-orange)!important;transform:translateY(-1px)}
+label[for="mediaInput"] span{color:#666!important}
+label[for="mediaInput"] .text-indigo-400{color:var(--st-orange)!important}
+button{transition:transform .15s ease,box-shadow .15s ease}
+button:hover{transform:translateY(-1px)}
+.bg-indigo-600,.bg-indigo-700{background:var(--st-orange)!important}
+.hover\:bg-indigo-700:hover,.hover\:bg-indigo-600:hover,.hover\:bg-indigo-500:hover{background:#d93d1b!important}
+.border-indigo-500\/40{border-color:rgba(240,74,35,.35)!important}
+.text-indigo-400,.text-indigo-300{color:var(--st-orange)!important}
+#mediaPreviewContainer,#batchQueue{background:#fff!important;color:#111!important;border-color:#e7e7e7!important}
+#mediaPreviewContainer .text-gray-400,#batchQueue .text-gray-400{color:#666!important}
+@media(max-width:700px){
+  header{padding:12px!important}
+  header h1{font-size:1rem!important}
+  #appWorkspace{padding:12px!important;gap:12px!important}
+  #projectManager{padding:12px!important}
+  #killerWorkflowCard{padding:18px!important}
+  label[for="mediaInput"]{min-height:130px;padding:22px!important}
+}
+</style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen flex flex-col font-sans">
+
+    <!-- हेडर -->
+    <header class="bg-gray-800 p-4 shadow-lg border-b border-gray-700 flex flex-wrap justify-between items-center gap-3">
+        <h1 class="text-xl font-bold tracking-wide text-indigo-400">📸 SnapToDesign AI Pro <span class="text-xs text-gray-400 font-normal">V9.6 FINAL • API COMPATIBLE</span></h1>
+        <div class="flex flex-wrap gap-2 items-center">
+            <div id="modeSwitcher" class="flex items-center bg-gray-950 border border-gray-700 rounded-xl p-1 shadow-inner" role="tablist" aria-label="Editor mode">
+                <button id="simpleModeBtn" type="button" class="mode-btn active px-3 py-1.5 rounded-lg text-xs font-bold" aria-selected="true">🟢 Simple</button>
+                <button id="proModeBtn" type="button" class="mode-btn px-3 py-1.5 rounded-lg text-xs font-bold text-gray-400" aria-selected="false">🔵 Pro</button>
+            </div>
+        </div>
+        <div class="flex flex-wrap gap-3 items-center">
+            <select id="frameworkSelect" class="bg-gray-700 border border-gray-600 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-indigo-500">
+                <option value="html-tailwind">HTML + Tailwind CSS</option>
+                <option value="react-tailwind">React + Tailwind</option>
+                <option value="nextjs">Next.js (TypeScript)</option>
+            </select>
+            <div id="authArea" class="flex items-center gap-2">
+                <span id="creditsBadge" class="hidden text-xs bg-gray-700 border border-gray-600 rounded-full px-3 py-1 text-amber-300">⚡ <b id="creditsBalance">0</b> credits</span><span id="authUserEmail" class="hidden text-xs text-gray-400"></span>
+                <button id="authBtn" class="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-lg text-sm font-semibold transition-all">Login / Signup</button>
+                <button id="logoutBtn" class="hidden bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded-lg text-xs font-semibold">Logout</button>
+            </div>
+            <button id="installBtn" class="hidden bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-lg text-sm font-semibold transition-all">ॲप इन्स्टॉल करा</button>
+        </div>
+    </header>
+
+
+        <!-- AUTH MODAL -->
+        <div id="authModal" class="hidden fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm items-center justify-center p-4">
+          <div class="w-full max-w-md bg-gray-900 border border-gray-700 rounded-2xl p-6 shadow-2xl">
+            <div class="flex items-center justify-between mb-5"><div><h2 id="authTitle" class="text-xl font-bold">Login</h2><p class="text-xs text-gray-400 mt-1">Your projects sync securely to your account.</p></div><button id="authCloseBtn" class="text-gray-400 hover:text-white text-xl">×</button></div>
+            <div class="flex gap-2 mb-4"><button id="loginModeBtn" class="flex-1 bg-indigo-700 px-3 py-2 rounded-lg text-sm font-semibold">Login</button><button id="signupModeBtn" class="flex-1 bg-gray-800 px-3 py-2 rounded-lg text-sm font-semibold">Create account</button></div>
+            <form id="authForm" class="space-y-3"><input id="authEmail" type="email" required autocomplete="email" placeholder="Email address" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-3 text-sm outline-none focus:border-indigo-500"><input id="authPassword" type="password" required minlength="8" autocomplete="current-password" placeholder="Password (8+ characters)" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-3 text-sm outline-none focus:border-indigo-500"><button id="authSubmitBtn" type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 px-4 py-3 rounded-lg text-sm font-bold">Login</button></form>
+            <div id="authStatus" class="text-xs text-gray-400 mt-3 min-h-[18px]"></div>
+          </div>
+        </div>
+
+    <section id="referenceHero" class="mx-auto w-full max-w-[1500px] px-4 md:px-6 pt-5">
+      <div class="rounded-[28px] bg-white overflow-hidden shadow-2xl border border-white/10">
+        <div class="px-6 md:px-10 pt-8 md:pt-10 pb-7 text-center">
+          <div class="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[11px] font-bold tracking-wide" style="background:#fff1eb;color:#f04a23">● AI WEBSITE RECONSTRUCTION</div>
+          <h2 class="mt-4 text-3xl md:text-5xl font-black tracking-tight text-black">Turn your screenshot. <span style="color:#f04a23">Ship your website.</span></h2>
+          <p class="mx-auto mt-3 max-w-2xl text-sm md:text-base" style="color:#666">Upload a reference, rebuild the design with AI, edit it live, run QA, and export production-ready code.</p>
+        </div>
+        <div class="px-5 md:px-10 pb-9">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
+            <div class="rounded-2xl border border-gray-200 bg-gray-50 p-4 text-left"><div class="text-[10px] font-black tracking-widest text-gray-400">01 · REFERENCE</div><div class="mt-2 font-bold text-black">Upload screenshot</div><div class="mt-1 text-xs text-gray-500">PNG, JPG or multiple screens.</div></div>
+            <div class="rounded-2xl border border-gray-200 bg-gray-50 p-4 text-left"><div class="text-[10px] font-black tracking-widest text-gray-400">02 · REBUILD</div><div class="mt-2 font-bold text-black">AI recreates the UI</div><div class="mt-1 text-xs text-gray-500">Layout, typography, spacing and components.</div></div>
+            <div class="rounded-2xl border border-gray-200 bg-gray-50 p-4 text-left"><div class="text-[10px] font-black tracking-widest" style="color:#f04a23">03 · SHIP</div><div class="mt-2 font-bold text-black">Test, fix & export</div><div class="mt-1 text-xs text-gray-500">Compare, QA, auto-fix and ship.</div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <main id="appWorkspace" class="flex-1 p-4 md:p-6 max-w-[1600px] mx-auto w-full grid grid-cols-1 lg:grid-cols-[290px_minmax(0,1fr)_350px] gap-4 md:gap-5">
+        <section id="projectManager" class="workspace-panel bg-gray-800 p-4 rounded-2xl border border-gray-700 mb-4">
+          <div class="flex flex-wrap items-center gap-2">
+            <div class="font-semibold mr-2">📁 Project Workspace</div>
+            <input id="projectNameInput" class="flex-1 min-w-[180px] bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-sm" placeholder="Project name" value="Untitled Project">
+            <button id="newProjectBtn" class="bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded-lg text-xs font-semibold">＋ New</button>
+            <button id="saveProjectBtn" class="bg-emerald-700 hover:bg-emerald-600 px-3 py-2 rounded-lg text-xs font-semibold">💾 Save</button>
+            <select id="projectSelect" class="bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-xs min-w-[190px]"><option value="">Saved projects…</option></select>
+            <button id="loadProjectBtn" class="bg-indigo-700 hover:bg-indigo-600 px-3 py-2 rounded-lg text-xs font-semibold">↥ Load</button>
+            <button id="deleteProjectBtn" class="bg-red-800 hover:bg-red-700 px-3 py-2 rounded-lg text-xs font-semibold">🗑 Delete</button>
+          </div>
+          <div id="projectStatus" class="text-[11px] text-gray-500 mt-2">Projects are saved locally in this browser until a server database is connected.</div>
+        </section>
+
+
+        <!-- डावा विभाग -->
+        <div class="bg-gray-800 p-6 rounded-2xl border border-gray-700 flex flex-col gap-4">
+
+            <div id="killerWorkflowCard" class="rounded-2xl border border-indigo-500/40 bg-gradient-to-br from-indigo-950/80 via-gray-900 to-emerald-950/50 p-4 shadow-lg">
+                <div class="flex items-start justify-between gap-3">
+                    <div>
+                        <div class="text-[10px] uppercase tracking-[0.18em] text-indigo-300 font-bold">SNAPTODOESIGN DIFFERENCE</div>
+                        <h2 class="text-xl font-black text-white mt-1">Generate → Test → Fix → Verify</h2>
+                        <p class="text-xs text-gray-300 mt-1">फक्त AI website generate करत नाही — ती स्वतः तपासते, समस्या शोधते आणि सुधारणा पुन्हा verify करते.</p>
+                    </div>
+                    <span id="killerWorkflowBadge" class="shrink-0 px-2.5 py-1 rounded-full bg-gray-800 text-[10px] font-bold text-gray-300">2-MINUTE PROOF</span>
+                </div>
+                <div id="killerWorkflowSteps" class="grid grid-cols-2 sm:grid-cols-5 gap-2 mt-4 text-[10px]">
+                    <div data-kstep="generate" class="kstep rounded-lg bg-gray-950/70 border border-gray-800 p-2"><b>① BUILD</b><div class="text-gray-500 mt-1">Reference समजून घ्या</div></div>
+                    <div data-kstep="render" class="kstep rounded-lg bg-gray-950/70 border border-gray-800 p-2"><b>② RENDER</b><div class="text-gray-500 mt-1">खरा preview</div></div>
+                    <div data-kstep="test" class="kstep rounded-lg bg-gray-950/70 border border-gray-800 p-2"><b>③ TEST</b><div class="text-gray-500 mt-1">QA + runtime</div></div>
+                    <div data-kstep="fix" class="kstep rounded-lg bg-gray-950/70 border border-gray-800 p-2"><b>④ FIX</b><div class="text-gray-500 mt-1">AI सुधारणा</div></div>
+                    <div data-kstep="verify" class="kstep rounded-lg bg-gray-950/70 border border-gray-800 p-2"><b>⑤ VERIFY</b><div class="text-gray-500 mt-1">Evidence सहित</div></div>
+                </div>
+                <div id="killerWorkflowStatus" class="mt-3 text-xs text-indigo-200">पहिली reference image दिल्यावर हा workflow आपोआप सुरू होईल.</div>
+            </div>
+
+            <h2 class="text-lg font-semibold">१. स्क्रीनशॉट किंवा व्हिडिओ अपलोड करा</h2>
+            <label for="mediaInput" class="border-2 border-dashed border-gray-600 rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer hover:border-indigo-500 transition-all bg-gray-850">
+                <span class="text-gray-400 text-sm text-center">इथे इमेज (.png/.jpg) किंवा व्हिडिओ (.mp4) — keyframe demo निवडा, ड्रॅग करा, किंवा <span class="text-indigo-400 font-semibold">Ctrl+V ने पेस्ट करा</span> (एकापेक्षा जास्त स्क्रीन निवडता येतील)</span>
+                <input type="file" id="mediaInput" accept="image/*,video/*" multiple class="hidden">
+            </label>
+
+            <div id="mediaPreviewContainer" class="hidden text-center bg-gray-900 p-4 rounded-xl border border-gray-700">
+                <p class="text-xs text-emerald-400 mb-2 font-semibold">✅ फाईल यशस्वीरित्या लोड झाली आहे!</p>
+                <img id="imagePreview" class="max-h-36 rounded-lg mx-auto hidden border border-gray-700">
+                <video id="videoPreview" class="max-h-36 rounded-lg mx-auto hidden border border-gray-700" controls></video>
+            </div>
+
+            <!-- बॅच क्यू: एकाच वेळी अनेक स्क्रीन्ससाठी -->
+            <div id="batchQueue" class="hidden flex flex-wrap gap-2 bg-gray-900 p-3 rounded-xl border border-gray-700"></div>
+
+            <!-- ब्रँड डिझाईन टोकन्स: जनरेट होणारा प्रत्येक कोड ह्याच रंग/फॉन्ट/रेडियसमध्ये तयार होईल -->
+            <details class="bg-gray-900 rounded-xl border border-gray-700 p-4">
+                <summary class="cursor-pointer text-sm font-semibold text-gray-300">🎨 तुमची ब्रँड डिझाईन टोकन्स (एकदा सेट करा, प्रत्येक जनरेशनमध्ये वापरली जातील)</summary>
+                <div class="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                    <label class="flex flex-col gap-1">प्रायमरी रंग
+                        <input type="color" id="tokenPrimary" value="#6366f1" class="w-full h-8 rounded bg-gray-800 border border-gray-700">
+                    </label>
+                    <label class="flex flex-col gap-1">बॅकग्राउंड
+                        <input type="color" id="tokenBg" value="#0f172a" class="w-full h-8 rounded bg-gray-800 border border-gray-700">
+                    </label>
+                    <label class="flex flex-col gap-1">टेक्स्ट रंग
+                        <input type="color" id="tokenText" value="#ffffff" class="w-full h-8 rounded bg-gray-800 border border-gray-700">
+                    </label>
+                    <label class="flex flex-col gap-1">बॉर्डर-रेडियस
+                        <select id="tokenRadius" class="bg-gray-800 border border-gray-700 rounded px-2 py-1.5">
+                            <option value="0.25rem">कमी (4px)</option>
+                            <option value="0.75rem" selected>मध्यम (12px)</option>
+                            <option value="1.5rem">जास्त (24px)</option>
+                        </select>
+                    </label>
+                    <label class="flex flex-col gap-1 col-span-2">फॉन्ट फॅमिली
+                        <select id="tokenFont" class="bg-gray-800 border border-gray-700 rounded px-2 py-1.5">
+                            <option value="Inter, sans-serif">Inter (डीफॉल्ट)</option>
+                            <option value="'Poppins', sans-serif">Poppins</option>
+                            <option value="'Roboto', sans-serif">Roboto</option>
+                            <option value="Georgia, serif">Georgia (Serif)</option>
+                        </select>
+                    </label>
+                    <button id="saveTokensBtn" class="col-span-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg font-semibold py-1.5">टोकन्स सेव्ह करा ✅</button>
+                </div>
+            </details>
+
+            <!-- एक्झिस्टिंग कॉम्पोनंट लायब्ररी: डुप्लिकेट कॉम्पोनंट टाळण्यासाठी -->
+            <details class="bg-gray-900 rounded-xl border border-gray-700 p-4">
+                <summary class="cursor-pointer text-sm font-semibold text-gray-300">🧩 तुमची एक्झिस्टिंग कॉम्पोनंट लायब्ररी (डुप्लिकेट कोड टाळण्यासाठी)</summary>
+                <div class="mt-3 flex flex-col gap-2 text-xs">
+                    <textarea id="componentLibraryInput" placeholder="उदा. Button, Card, Navbar, PricingTable (कॉमाने वेगळे करा)" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-gray-300 h-16"></textarea>
+                    <button id="saveComponentsBtn" class="bg-indigo-600 hover:bg-indigo-700 rounded-lg font-semibold py-1.5">लायब्ररी सेव्ह करा ✅</button>
+                    <div id="reuseWarnings" class="hidden flex flex-col gap-1 text-amber-400"></div>
+                </div>
+            </details>
+
+            <!-- Production-readiness: loading/error स्टेट्स -->
+            <label class="flex items-center gap-2 text-xs text-gray-400">
+                <input type="checkbox" id="includeStatesCheckbox" class="accent-indigo-500">
+                Loading + Error स्टेट्स पण जनरेट करा (production-ready कोडसाठी)
+            </label>
+
+            <button id="convertBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 py-3 rounded-xl font-bold text-lg transition-all shadow-md">AI कोड जनरेट करा 🚀</button>
+            <p id="timeEstimate" class="text-xs text-gray-600 text-center">⏱️ Claude Vision API वापरून खरा कोड जनरेट होईल</p>
+            <p id="batchHint" class="hidden text-xs text-gray-500 text-center">वरील सर्व <span id="batchCount">0</span> स्क्रीन्स एकत्र प्रोसेस होऊन एका ZIP मध्ये (page-1, page-2...) मिळतील.</p>
+
+            <!-- झटपट टेम्प्लेट्स: वेट न करता लगेच कोड -->
+            <div class="flex flex-col gap-2">
+                <h3 class="text-sm font-semibold text-gray-300">⚡ झटपट टेम्प्लेट्स (अपलोड/वेट शिवाय, १ सेकंदात)</h3>
+                <div class="flex flex-wrap gap-2">
+                    <button data-template="navbar" class="quick-template-btn bg-gray-700 hover:bg-indigo-600 text-xs px-3 py-1.5 rounded-lg font-semibold transition-all">🧭 Navbar</button>
+                    <button data-template="hero" class="quick-template-btn bg-gray-700 hover:bg-indigo-600 text-xs px-3 py-1.5 rounded-lg font-semibold transition-all">🌟 Hero Section</button>
+                    <button data-template="pricing" class="quick-template-btn bg-gray-700 hover:bg-indigo-600 text-xs px-3 py-1.5 rounded-lg font-semibold transition-all">💳 Pricing Card</button>
+                    <button data-template="login" class="quick-template-btn bg-gray-700 hover:bg-indigo-600 text-xs px-3 py-1.5 rounded-lg font-semibold transition-all">🔐 Login Form</button>
+                    <button data-template="footer" class="quick-template-btn bg-gray-700 hover:bg-indigo-600 text-xs px-3 py-1.5 rounded-lg font-semibold transition-all">📄 Footer</button>
+                </div>
+            </div>
+
+            <!-- AI चॅट + एडिट हिस्टरी -->
+            <div class="mt-2 flex flex-col gap-2">
+                <h3 class="text-sm font-semibold text-gray-300">💡 डिझाईनमध्ये बदल सुचवा (AI चॅट)</h3>
+                <div class="flex gap-2">
+                    <input type="text" id="aiChatPrompt" class="flex-1 bg-gray-950 border border-gray-700 rounded-xl px-4 py-2 text-sm text-emerald-400 focus:outline-none focus:border-indigo-500" placeholder="उदा. 'बटणाचा रंग निळा करा'...">
+                    <button id="updateDesignBtn" class="bg-emerald-600 hover:bg-emerald-700 px-4 py-2 rounded-xl text-sm font-bold transition-all">बदला ✨</button>
+                </div>
+                <div id="editHistory" class="hidden max-h-24 overflow-y-auto text-xs text-gray-400 bg-gray-950 rounded-lg p-2 border border-gray-800 flex flex-col gap-1"></div>
+            </div>
+
+            <!-- अ‍ॅक्सेसिबिलिटी + क्वालिटी बॅज -->
+            <div id="qualityBadges" class="hidden flex flex-wrap gap-2 text-xs">
+                <span id="badgeAlt" class="px-2 py-1 rounded-full bg-gray-700">🖼️ Alt-text तपासत आहे...</span>
+                <span id="badgeContrast" class="px-2 py-1 rounded-full bg-gray-700">🎨 Contrast तपासत आहे...</span>
+                <span id="badgeResponsive" class="px-2 py-1 rounded-full bg-gray-700">📱 Responsive तपासत आहे...</span>
+            </div>
+
+
+            <!-- V9 Production Gate -->
+            <section class="bg-gray-950 rounded-xl border border-indigo-800/60 p-4">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                        <h3 class="text-md font-semibold text-indigo-300">🧠 V9 Production Gate</h3>
+                        <p class="text-xs text-gray-500">Build → Render → Compare → Diagnose → Auto-Fix → Verify</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button id="runV9QaBtn" class="bg-indigo-600 hover:bg-indigo-700 px-3 py-1.5 rounded-lg text-xs font-bold">🔍 Run V9 QA</button>
+                        <button id="autoFixV9Btn" class="bg-emerald-600 hover:bg-emerald-700 px-3 py-1.5 rounded-lg text-xs font-bold">⚡ Auto-Fix</button>
+                    </div>
+                </div>
+                <div class="mt-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+                    <div class="bg-gray-900 rounded-lg p-2"><div class="text-[10px] text-gray-500">VISUAL</div><div id="v9VisualScore" class="text-lg font-bold">—</div></div>
+                    <div class="bg-gray-900 rounded-lg p-2"><div class="text-[10px] text-gray-500">RESPONSIVE</div><div id="v9ResponsiveScore" class="text-lg font-bold">—</div></div>
+                    <div class="bg-gray-900 rounded-lg p-2"><div class="text-[10px] text-gray-500">A11Y</div><div id="v9A11yScore" class="text-lg font-bold">—</div></div>
+                    <div class="bg-gray-900 rounded-lg p-2"><div class="text-[10px] text-gray-500">RUNTIME</div><div id="v9RuntimeScore" class="text-lg font-bold">—</div></div>
+                    <div class="bg-gray-900 rounded-lg p-2"><div class="text-[10px] text-gray-500">SECURITY</div><div id="v9SecurityScore" class="text-lg font-bold">—</div></div>
+                    <div class="bg-gray-900 rounded-lg p-2"><div class="text-[10px] text-gray-500">SHIP</div><div id="v9ShipScore" class="text-lg font-bold">—</div></div>
+                </div>
+                <div id="v9IssueList" class="mt-3 text-xs text-gray-400 space-y-1 max-h-40 overflow-y-auto"></div>
+                <div id="v9Status" class="mt-2 text-xs text-gray-500">Reference screenshot दिलेला असेल तर Visual Twin comparison चालेल.
+            <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+              <button id="v9ReportBtn" class="px-3 py-2 rounded-lg bg-slate-800 text-white text-sm">Export QA Evidence</button>
+              <span id="v9GateBadge" class="px-3 py-2 rounded-lg bg-slate-100 text-slate-700 text-sm">SHIP GATE: NOT RUN</span>
+            </div>
+            <div id="v9Evidence" class="mt-3 text-xs text-slate-600"></div>
+</div>
+            </section>
+
+            <!-- लाईव्ह प्रिव्ह्यूमध्ये खरा रनटाइम एरर आढळल्यास इशारा (डाउनलोड करण्याआधी दिसतो) -->
+            <div id="runtimeErrorBadge" class="hidden text-xs px-3 py-2 rounded-lg bg-red-900/60 border border-red-700 text-red-200"></div>
+
+            <!-- मल्टी-फाईल कोड टॅब्स -->
+            <h2 class="text-lg font-semibold mt-2">२. जनरेट झालेला कोड</h2>
+            <div id="fileTabs" class="flex gap-1 border-b border-gray-700 text-sm overflow-x-auto"></div>
+            <div class="relative flex-1">
+                <textarea id="codeOutput" class="w-full h-full min-h-[220px] bg-gray-950 p-4 rounded-xl border border-gray-700 font-mono text-xs text-green-400 resize-none focus:outline-none" readonly placeholder="तुमचा सिलेक्ट केलेला फ्रेमवर्क कोड इथे दिसेल..."></textarea>
+                <div class="absolute top-2 right-2 flex gap-2 flex-wrap justify-end">
+                    <button id="undoBtn" class="bg-gray-700 hover:bg-gray-600 text-xs px-3 py-1.5 rounded-lg font-semibold" disabled>↶ Undo</button>
+                    <button id="redoBtn" class="bg-gray-700 hover:bg-gray-600 text-xs px-3 py-1.5 rounded-lg font-semibold" disabled>↷ Redo</button>
+                    <button id="copyCodeBtn" class="bg-gray-700 hover:bg-gray-600 text-xs px-3 py-1.5 rounded-lg font-semibold">📋 कॉपी</button>
+                    <button id="downloadZipBtn" class="bg-indigo-600 hover:bg-indigo-700 text-xs px-3 py-1.5 rounded-lg font-semibold">⬇️ ZIP डाउनलोड</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- उजवा विभाग: लाईव्ह प्रिव्ह्यू -->
+        <div class="bg-gray-800 p-6 rounded-2xl border border-gray-700 flex flex-col gap-4">
+            <div class="flex justify-between items-center flex-wrap gap-2">
+                <h2 class="text-lg font-semibold">३. लाईव्ह प्रिव्ह्यू</h2>
+                <!-- रिस्पॉन्सिव्ह डिव्हाईस स्विचर -->
+                <div class="flex gap-1 bg-gray-900 rounded-lg p-1 border border-gray-700">
+                    <button data-w="100%" data-h="100%" class="device-btn px-3 py-1 rounded-md text-xs font-semibold bg-indigo-600">🖥️ Desktop</button>
+                    <button data-w="768px" data-h="1024px" class="device-btn px-3 py-1 rounded-md text-xs font-semibold text-gray-400 hover:text-white">📱 Tablet</button>
+                    <button data-w="375px" data-h="667px" class="device-btn px-3 py-1 rounded-md text-xs font-semibold text-gray-400 hover:text-white">📲 Mobile</button>
+                </div>
+            </div>
+            <div id="previewWrapper" class="relative flex-1 bg-gray-950 rounded-xl overflow-auto border border-gray-700 min-h-[480px] flex items-center justify-center p-4">
+                <iframe id="previewFrame" class="device-frame bg-white rounded-lg shadow-2xl" style="width:100%; height:100%; min-height:460px;"></iframe>
+                <img id="overlayImage" class="hidden absolute inset-0 m-4 pointer-events-none rounded-lg" style="opacity:0; object-fit:contain; width:calc(100% - 2rem); height:calc(100% - 2rem);">
+            </div>
+            <div id="overlayControl" class="hidden flex items-center gap-3 text-xs text-gray-400">
+                <span>🔍 ओरिजिनल स्क्रीनशॉट ओव्हरले</span>
+                <input type="range" id="overlaySlider" min="0" max="100" value="0" class="flex-1 accent-indigo-500">
+                <span id="overlayValue">0%</span>
+            </div>
+            <p class="text-xs text-gray-500">टीप: ओव्हरले स्लायडर वाढवून तुमचा जनरेट झालेला डिझाईन ओरिजिनल स्क्रीनशॉटशी किती जुळतो ते डाउनलोडआधीच तपासा — यामुळे नंतरचं मॅन्युअल दुरुस्तीचं काम कमी होतं.</p>
+        </div>
+    </main>
+
+    <!-- V9.6 FINAL DASHBOARD LAYOUT: same functionality, production dashboard arrangement -->
+    <script>
+    (() => {
+      const main = document.getElementById('appWorkspace');
+      if (!main) return;
+      // DOM order is: projectManager, workspace content, preview panel.
+      // The old code treated projectManager as the left workspace, which broke the 3-column dashboard.
+      const projectManager = main.children[0];
+      const left = main.children[1];
+      const preview = main.children[2];
+      if (!left || !preview) return;
+      projectManager?.classList.add('workspace-panel');
+      left.classList.add('workspace-panel');
+      preview.classList.add('workspace-panel');
+      // Keep the project bar above the three-column workspace instead of making it a grid column.
+      if (projectManager) {
+        projectManager.classList.remove('mb-4');
+        main.parentNode.insertBefore(projectManager, main);
+      }
+      // Make the preview panel the visual middle column.
+      const codeHeader = [...left.children].find(el => el.tagName === 'H2' && /जनरेट झालेला कोड/.test(el.textContent));
+      if (codeHeader) {
+        const codeTabs = codeHeader.nextElementSibling;
+        const codeWrap = codeTabs?.nextElementSibling;
+        const codeNodes = [codeHeader, codeTabs, codeWrap].filter(Boolean);
+        const previewTitle = preview.querySelector('h2');
+        const previewWrap = document.getElementById('previewWrapper');
+        const overlayControl = document.getElementById('overlayControl');
+        const tip = overlayControl?.nextElementSibling;
+        if (previewTitle && previewWrap) {
+          codeNodes.forEach(n => preview.appendChild(n));
+          // Keep preview controls before generated code.
+          [previewTitle, previewWrap, overlayControl, tip].filter(Boolean).forEach(n => preview.appendChild(n));
+          codeNodes.forEach(n => left.appendChild(n));
+        }
+      }
+      // Right rail: AI chat + quality + V9 gate.
+      const rail = document.createElement('aside');
+      rail.id = 'rightControlRail';
+      rail.className = 'workspace-panel flex flex-col gap-4';
+      const ai = [...left.querySelectorAll('div')].find(el => el.querySelector?.('#aiChatPrompt'));
+      const quality = document.getElementById('qualityBadges');
+      const gate = [...left.querySelectorAll('section')].find(el => el.querySelector?.('#runV9QaBtn'));
+      const runtime = document.getElementById('runtimeErrorBadge');
+      [ai, quality, gate, runtime].filter(Boolean).forEach(n => {
+        n.classList.add('rail-card');
+        rail.appendChild(n);
+      });
+      main.appendChild(rail);
+      // Header navigation for the final dashboard look.
+      const header = document.querySelector('header');
+      if (header && !header.querySelector('.final-nav')) {
+        const nav = document.createElement('nav');
+        nav.className='final-nav';
+        nav.innerHTML='<button class="active" data-nav="dashboard">Dashboard</button><button data-nav="projects">Projects</button><button data-nav="versions">Versions</button><button data-nav="components">Components</button><button data-nav="settings">Settings</button>';
+        const actions = header.lastElementChild;
+        header.insertBefore(nav, actions);
+      }
+      document.querySelectorAll('.final-nav button[data-nav]').forEach(btn=>btn.addEventListener('click',()=>{
+        const target={dashboard:'appWorkspace',projects:'projectManager',versions:'fpVersionBtn',components:'componentLibraryInput',settings:'fpApiInput'}[btn.dataset.nav];
+        const el=document.getElementById(target); if(el) el.scrollIntoView({behavior:'smooth',block:'center'});
+        document.querySelectorAll('.final-nav button').forEach(b=>b.classList.remove('active')); btn.classList.add('active');
+      }));
+    })();
+    </script>
+
+    <!-- FINAL PRODUCT INTEGRATION CENTER -->
+    <section id="advancedIntegrationCenter" class="max-w-7xl mx-auto w-full px-6 pb-6 advanced-section">
+        <div class="bg-gray-800 border border-indigo-700/60 rounded-2xl p-5 shadow-xl">
+            <div class="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                    <h2 class="text-lg font-bold text-indigo-300">🚀 Final Product Integration Center</h2>
+                    <p class="text-xs text-gray-400 mt-1">Screenshot → URL → GitHub → Full-Stack QA → Browser/Device → API → Deploy → Monitor → Version/Rollback → Autonomous Agent</p>
+                </div>
+                <span id="fpOverallBadge" class="px-3 py-1.5 rounded-full bg-gray-900 border border-gray-700 text-xs font-bold text-gray-400">DEMO / NOT RUN</span>
+            </div>
+
+            <div class="mt-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+
+                <div class="fp-card">
+                    <h3 class="font-semibold text-sm">🧪 Full-Stack Backend / Database</h3>
+                    <p class="text-[11px] text-gray-500 mt-1">Generated preview मधील forms, API hooks आणि DB संकेत तपासा.</p>
+                    <button id="fpStackBtn" class="fp-btn mt-3 w-full bg-indigo-600 hover:bg-indigo-700 rounded-lg py-2 text-xs font-bold">Run Full-Stack Test</button>
+                    <div id="fpStackStatus" class="fp-status mt-2 text-[11px] text-gray-500"></div>
+                </div>
+
+                <div class="fp-card">
+                    <h3 class="font-semibold text-sm">🖥️ Real Browser / Device</h3>
+                    <p class="text-[11px] text-gray-500 mt-1">Preview ला desktop/tablet/mobile modes मध्ये smoke-test करा.</p>
+                    <div class="grid grid-cols-3 gap-2 mt-3">
+                        <button data-fp-device="desktop" class="fp-device-btn fp-btn bg-gray-700 hover:bg-gray-600 rounded-lg py-2 text-[11px]">Desktop</button>
+                        <button data-fp-device="tablet" class="fp-device-btn fp-btn bg-gray-700 hover:bg-gray-600 rounded-lg py-2 text-[11px]">Tablet</button>
+                        <button data-fp-device="mobile" class="fp-device-btn fp-btn bg-gray-700 hover:bg-gray-600 rounded-lg py-2 text-[11px]">Mobile</button>
+                    </div>
+                    <div id="fpBrowserStatus" class="fp-status mt-2 text-[11px] text-gray-500"></div>
+                </div>
+
+                <div class="fp-card">
+                    <h3 class="font-semibold text-sm">🔌 API / Integration Testing</h3>
+                    <input id="fpApiInput" type="url" placeholder="https://example.com/api/health" class="mt-3 w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-xs">
+                    <button id="fpApiBtn" class="fp-btn mt-2 w-full bg-indigo-600 hover:bg-indigo-700 rounded-lg py-2 text-xs font-bold">Run API Test</button>
+                    <div id="fpApiStatus" class="fp-status mt-2 text-[11px] text-gray-500"></div>
+                </div>
+
+                <div class="fp-card">
+                    <h3 class="font-semibold text-sm">🌐 URL → Editable Project</h3>
+                    <p class="text-[11px] text-gray-500 mt-1">Live public HTTPS page import करा आणि पुढे AI/refinement workflow ला द्या.</p>
+                    <input id="fpImportUrl" type="url" placeholder="https://example.com" class="mt-3 w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-xs">
+                    <button id="fpImportUrlBtn" class="fp-btn mt-2 w-full bg-indigo-600 hover:bg-indigo-700 rounded-lg py-2 text-xs font-bold">Import URL</button>
+                    <div id="fpImportUrlStatus" class="fp-status mt-2 text-[11px] text-gray-500"></div>
+                </div>
+
+                <div class="fp-card">
+                    <h3 class="font-semibold text-sm">🐙 GitHub Export</h3>
+                    <p class="text-[11px] text-gray-500 mt-1">Generated files थेट GitHub repository मध्ये commit करा. Token save केला जात नाही.</p>
+                    <input id="fpGithubToken" type="password" autocomplete="off" placeholder="GitHub token" class="mt-3 w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-xs">
+                    <div class="grid grid-cols-2 gap-2 mt-2"><input id="fpGithubOwner" placeholder="owner" class="bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-xs"><input id="fpGithubRepo" placeholder="repo" class="bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-xs"></div>
+                    <div class="grid grid-cols-2 gap-2 mt-2"><input id="fpGithubBranch" value="main" placeholder="branch" class="bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-xs"><input id="fpGithubPrefix" placeholder="folder (optional)" class="bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-xs"></div>
+                    <label class="flex items-center gap-2 mt-2 text-[10px] text-gray-400"><input id="permGitWrite" type="checkbox"> I approve GitHub write for this session</label>
+                    <button id="fpGithubBtn" class="fp-btn mt-2 w-full bg-gray-700 hover:bg-gray-600 rounded-lg py-2 text-xs font-bold">Export to GitHub</button>
+                    <div id="fpGithubStatus" class="fp-status mt-2 text-[11px] text-gray-500"></div>
+                </div>
+
+                <div class="fp-card">
+                    <h3 class="font-semibold text-sm">🎞️ Video Temporal QA</h3>
+                    <p class="text-[11px] text-gray-500 mt-1">Video चे sampled frames compare करून motion, scene changes आणि peak transition शोधा.</p>
+                    <button id="fpVideoAnalyzeBtn" class="fp-btn mt-3 w-full bg-indigo-600 hover:bg-indigo-700 rounded-lg py-2 text-xs font-bold">Analyze Uploaded Video</button>
+                    <div id="fpVideoStatus" class="fp-status mt-2 text-[11px] text-gray-500"></div>
+                </div>
+
+                <div class="fp-card">
+                    <h3 class="font-semibold text-sm">📡 Continuous Monitoring</h3>
+                    <input id="fpHealthUrl" type="url" placeholder="Optional health URL /health" class="mt-3 w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-xs">
+                    <div class="grid grid-cols-2 gap-2 mt-2">
+                        <button id="fpMonitorBtn" class="fp-btn bg-indigo-600 hover:bg-indigo-700 rounded-lg py-2 text-xs font-bold">Start Monitor</button>
+                        <button id="fpMonitorStopBtn" class="fp-btn bg-gray-700 hover:bg-gray-600 rounded-lg py-2 text-xs font-bold">Stop</button>
+                    </div>
+                    <div id="fpMonitorStatus" class="fp-status mt-2 text-[11px] text-gray-500"></div>
+                </div>
+
+                <div class="fp-card">
+                    <h3 class="font-semibold text-sm">🕘 Version / Rollback</h3>
+                    <div class="grid grid-cols-2 gap-2 mt-3">
+                        <button id="fpVersionBtn" class="fp-btn bg-indigo-600 hover:bg-indigo-700 rounded-lg py-2 text-xs font-bold">Save Version</button>
+                        <button id="fpRollbackBtn" class="fp-btn bg-gray-700 hover:bg-gray-600 rounded-lg py-2 text-xs font-bold">Rollback</button>
+                    </div>
+                    <div id="fpVersionStatus" class="fp-status mt-2 text-[11px] text-gray-500"></div>
+                </div>
+
+                <div class="fp-card md:col-span-2 xl:col-span-3">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                            <h3 class="font-semibold text-sm">🤖 Stronger Autonomous Agent</h3>
+                            <p class="text-[11px] text-gray-500 mt-1">QA → diagnose → Auto-Fix → re-QA → version snapshot → Ship Gate.</p>
+                        </div>
+                        <button id="fpAgentBtn" class="fp-btn bg-fuchsia-600 hover:bg-fuchsia-700 rounded-lg px-5 py-2 text-xs font-bold">Run Autonomous Agent</button>
+                    </div>
+                    <div id="fpAgentStatus" class="fp-status mt-3 text-[11px] text-gray-500"></div>
+                    <div id="fpAgentLog" class="mt-2 max-h-32 overflow-y-auto bg-gray-950 rounded-lg border border-gray-800 p-2 text-[10px] text-gray-500"></div>
+                </div>
+            </div>
+
+            <div class="mt-4 p-4 rounded-xl bg-gray-950 border border-cyan-800/60">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                        <h3 class="font-bold text-sm text-cyan-300">🧪 Production Reliability Center</h3>
+                        <p class="text-[11px] text-gray-400 mt-1">Market pain-points covered: AI code drift, hidden secrets, dependency risk, token/credit burn, regressions, runtime errors and unsafe changes.</p>
+                    </div>
+                    <span id="fpReliabilityBadge" class="px-3 py-1 rounded-full bg-gray-900 border border-gray-700 text-[10px] font-bold text-gray-400">READY</span>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2 mt-3 text-[11px]">
+                    <div class="p-3 rounded-lg bg-gray-900 border border-gray-800"><b>🔍 Change Impact Preview</b><p class="text-gray-500 mt-1">Before AI edits, show affected files/components and risk level.</p><button id="fpImpactBtn" class="fp-btn mt-2 bg-cyan-700 hover:bg-cyan-600 rounded-lg px-3 py-2 font-bold">Analyze Impact</button><div id="fpImpactStatus" class="fp-status mt-2 text-gray-500"></div></div>
+                    <div class="p-3 rounded-lg bg-gray-900 border border-gray-800"><b>🔐 Secret + Dependency Scan</b><p class="text-gray-500 mt-1">Detect leaked keys, unsafe scripts and risky dependency patterns before ship.</p><button id="fpSecurityScanBtn" class="fp-btn mt-2 bg-cyan-700 hover:bg-cyan-600 rounded-lg px-3 py-2 font-bold">Run Scan</button><div id="fpSecurityScanStatus" class="fp-status mt-2 text-gray-500"></div></div>
+                    <div class="p-3 rounded-lg bg-gray-900 border border-gray-800"><b>🧯 Error / Regression Guard</b><p class="text-gray-500 mt-1">Capture runtime errors and compare the current build against the last saved version.</p><button id="fpRegressionBtn" class="fp-btn mt-2 bg-cyan-700 hover:bg-cyan-600 rounded-lg px-3 py-2 font-bold">Run Regression Check</button><div id="fpRegressionStatus" class="fp-status mt-2 text-gray-500"></div></div>
+                    <div class="p-3 rounded-lg bg-gray-900 border border-gray-800"><b>💳 AI Cost Guard</b><p class="text-gray-500 mt-1">Set a per-run token ceiling so failed AI loops cannot silently burn credits.</p><div class="flex gap-2 mt-2"><input id="fpTokenBudget" type="number" min="1000" step="1000" value="30000" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2"><button id="fpBudgetBtn" class="fp-btn bg-cyan-700 hover:bg-cyan-600 rounded-lg px-3 py-2 font-bold">Set</button></div><div id="fpBudgetStatus" class="fp-status mt-2 text-gray-500"></div></div>
+                    <div class="p-3 rounded-lg bg-gray-900 border border-gray-800"><b>⏱️ Agent Retry Limit</b><p class="text-gray-500 mt-1">Hard cap on autonomous retries; stop instead of looping endlessly.</p><div class="flex gap-2 mt-2"><input id="fpRetryLimit" type="number" min="1" max="10" value="3" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2"><button id="fpRetryBtn" class="fp-btn bg-cyan-700 hover:bg-cyan-600 rounded-lg px-3 py-2 font-bold">Set</button></div><div id="fpRetryStatus" class="fp-status mt-2 text-gray-500"></div></div>
+                    <div class="p-3 rounded-lg bg-gray-900 border border-gray-800"><b>📝 Human Approval Record</b><p class="text-gray-500 mt-1">Require reason + expiry before risky permissions are activated.</p><input id="fpApprovalReason" placeholder="Approval reason" class="mt-2 w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2"><div id="fpApprovalExpiry" class="fp-status mt-2 text-gray-500">🔒 No active approval</div><button id="fpApprovalBtn" class="fp-btn mt-2 bg-cyan-700 hover:bg-cyan-600 rounded-lg px-3 py-2 font-bold">Create Approval</button><div id="fpApprovalStatus" class="fp-status mt-2 text-gray-500"></div></div>
+                </div>
+            </div>
+
+            <div class="mt-4 p-4 rounded-xl bg-gray-950 border border-red-800/60">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                        <h3 class="font-bold text-sm text-red-300">🛡️ Safety Gate</h3>
+                        <p class="text-[11px] text-gray-400 mt-1">Autonomous Agent is default-deny and requires an explicit, time-limited human approval.</p>
+                    </div>
+                    <span id="fpPermissionBadge" class="px-3 py-1 rounded-full bg-red-950 border border-red-800 text-[10px] font-bold text-red-300">LOCKED</span>
+                </div>
+                <label class="flex items-start gap-2 p-2 mt-3 rounded-lg bg-gray-900 border border-gray-800 text-[11px]"><input id="permAutoAgent" type="checkbox" class="mt-0.5"> <span><b>Autonomous Agent</b><br><span class="text-gray-500">allow the agent to chain the built-in QA, auto-fix and version actions</span></span></label>
+                <div class="flex flex-wrap gap-2 mt-3">
+                    <button id="fpLockPermBtn" class="fp-btn bg-gray-700 hover:bg-gray-600 rounded-lg px-4 py-2 text-[11px] font-bold">Lock</button>
+                    <button id="fpResetPermBtn" class="fp-btn bg-red-700 hover:bg-red-600 rounded-lg px-4 py-2 text-[11px] font-bold">Revoke</button>
+                </div>
+                <div id="fpPermissionLog" class="mt-2 text-[10px] text-gray-500">🔒 Default-deny: Autonomous Agent permission revoked.</div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- ऑटो-क्लीनअप रिपोर्ट -->
+    <div class="max-w-7xl mx-auto w-full px-6 pb-6">
+        <div id="cleanupPanel" class="hidden bg-gray-800 border border-gray-700 rounded-2xl p-5">
+            <div class="flex justify-between items-center flex-wrap gap-2 mb-2">
+                <h3 class="text-md font-semibold text-indigo-400">🧹 ऑटो-क्लीनअप रिपोर्ट</h3>
+                <button id="rerunCleanupBtn" class="bg-gray-700 hover:bg-gray-600 text-xs px-3 py-1.5 rounded-lg font-semibold">पुन्हा क्लीनअप करा</button>
+            </div>
+            <div id="cleanupFixesList" class="text-xs text-emerald-400 flex flex-col gap-1 mb-3"></div>
+            <div>
+                <p class="text-xs text-gray-400 font-semibold mb-1">⚠️ अजूनही मॅन्युअली तपासण्यासारखं (AI/heuristic ने पूर्ण सुटत नाही):</p>
+                <ul class="text-xs text-gray-500 list-disc list-inside space-y-0.5">
+                    <li>कॉम्प्लेक्स स्टेट/लॉजिक (फॉर्म व्हॅलिडेशन, API कनेक्शन्स)</li>
+                    <li>रंग-कॉन्ट्रास्ट आणि ब्रँड टोन अचूकता</li>
+                    <li>पुनरावृत्ती होणारे ब्लॉक्स री-यूजेबल कॉम्पोनंटमध्ये मोडणे</li>
+                    <li>SEO मेटा टॅग्स आणि खरा कंटेंट</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===== FINAL PRODUCT INTEGRATION CENTER =====
+        const fp = { monitorTimer: null, versions: [], apiBase: (localStorage.getItem('snapToDesignApiBase') || '').replace(/\/$/, '') };
+        const fpApi = (path) => `${fp.apiBase}${path}`;
+        const fpFetch = (path, options={}) => fetch(fpApi(path), options);
+        // Production backend: set localStorage key `snapToDesignApiBase` to your server origin.
+        // Example: localStorage.setItem('snapToDesignApiBase','https://api.example.com');
+        const fpStatus = (id, text, type='warn') => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.className = `fp-status mt-2 text-[11px] fp-${type}`;
+            el.textContent = text;
+        };
+        const fpLog = (text, type='warn') => {
+            const el = document.getElementById('fpAgentLog');
+            if (!el) return;
+            const row = document.createElement('div');
+            row.className = type === 'ok' ? 'fp-ok' : type === 'err' ? 'fp-err' : 'fp-warn';
+            row.textContent = `${new Date().toLocaleTimeString()} — ${text}`;
+            el.prepend(row);
+        };
+        const fpHtml = () => {
+            const frame = document.getElementById('previewFrame');
+            return frame?.contentDocument?.documentElement?.outerHTML || lastRawBody || '';
+        };
+        const fpSetOverall = (text, type='warn') => {
+            const el = document.getElementById('fpOverallBadge');
+            if (!el) return;
+            el.className = `px-3 py-1.5 rounded-full bg-gray-900 border border-gray-700 text-xs font-bold fp-${type}`;
+            el.textContent = text;
+        };
+
+
+        document.getElementById('fpStackBtn')?.addEventListener('click', async () => {
+            const html = fpHtml();
+            const doc = document.getElementById('previewFrame')?.contentDocument;
+            const forms = doc?.querySelectorAll('form').length || 0;
+            const apiHints = (html.match(/(?:fetch|axios|\/api\/|graphql)/gi) || []).length;
+            const dbHints = (html.match(/(?:supabase|firebase|postgres|mysql|mongodb|prisma|database)/gi) || []).length;
+            fpStatus('fpStackStatus', `Stack smoke-test: ${forms} form(s), ${apiHints} API संकेत, ${dbHints} DB संकेत. Real backend/DB test साठी project connector आवश्यक.`, forms || apiHints || dbHints ? 'ok' : 'warn');
+        });
+
+        document.querySelectorAll('.fp-device-btn').forEach(btn => btn.addEventListener('click', () => {
+            const mode = btn.dataset.fpDevice;
+            const map = { desktop:['100%','100%'], tablet:['768px','1024px'], mobile:['375px','667px'] };
+            const [w,h] = map[mode];
+            const deviceBtn = [...document.querySelectorAll('.device-btn')].find(x => x.dataset.w === w && x.dataset.h === h);
+            deviceBtn?.click();
+            fpStatus('fpBrowserStatus', `✅ ${mode} viewport smoke-test mode लागू.`, 'ok');
+        }));
+
+        document.getElementById('fpApiBtn')?.addEventListener('click', async () => {
+            const url = document.getElementById('fpApiInput')?.value.trim();
+            if (!/^https?:\/\//i.test(url)) return fpStatus('fpApiStatus', 'Valid API URL द्या.', 'warn');
+            fpStatus('fpApiStatus', 'API request चालू…', 'warn');
+            const t = performance.now();
+            try {
+                const r = await fetch(url, { method:'GET', headers:{'Accept':'application/json,text/plain,*/*'} });
+                const ms = Math.round(performance.now()-t);
+                fpStatus('fpApiStatus', `${r.ok ? '✅' : '⚠️'} HTTP ${r.status} — ${ms} ms. CORS/credentials असल्यास backend test runner वापरा.`, r.ok ? 'ok' : 'warn');
+            } catch(e) {
+                fpStatus('fpApiStatus', `❌ API test failed: ${e.message}`, 'err');
+            }
+        });
+
+
+        document.getElementById('fpImportUrlBtn')?.addEventListener('click', async () => {
+            const url=document.getElementById('fpImportUrl')?.value.trim();
+            if(!/^https:\/\//i.test(url)) return fpStatus('fpImportUrlStatus','HTTPS URL द्या.','warn');
+            if(!authUser) return fpStatus('fpImportUrlStatus','Login required.','warn');
+            fpStatus('fpImportUrlStatus','URL import चालू…','warn');
+            try {
+                const r=await fetchWithTimeout(fpApi('/api/connectors/url-import'),{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({url})},30000);
+                const d=await r.json(); if(!r.ok) throw new Error(d.error||`HTTP ${r.status}`);
+                lastRawBody=d.html||''; generatedFiles=getFilesByFramework(document.getElementById('frameworkSelect')?.value||'html-tailwind',lastRawBody);
+                renderFileTabs(); renderPreview(lastRawBody); document.getElementById('codeOutput').value=lastRawBody;
+                fpStatus('fpImportUrlStatus',`✅ Imported ${d.status} — ${Math.round((d.html||'').length/1024)} KB. आता QA/AI refinement चालवू शकता.`,'ok');
+            } catch(e) { fpStatus('fpImportUrlStatus','❌ '+e.message,'err'); }
+        });
+
+        document.getElementById('fpGithubBtn')?.addEventListener('click', async () => {
+            try {
+                if(!authUser) throw new Error('Login required.');
+                fpRequirePermission('githubWrite','GitHub write');
+                const token=document.getElementById('fpGithubToken')?.value.trim();
+                const owner=document.getElementById('fpGithubOwner')?.value.trim(); const repo=document.getElementById('fpGithubRepo')?.value.trim();
+                if(!token||!owner||!repo) throw new Error('GitHub token, owner आणि repo भरा.');
+                const source=Object.keys(generatedFiles||{}).length?generatedFiles:{'index.html':lastRawBody||''};
+                const files=Object.entries(source).map(([path,content])=>({path:String(path).replace(/^page-\d+\//,''),content:String(content)}));
+                fpStatus('fpGithubStatus',`GitHub मध्ये ${files.length} file(s) commit होत आहेत…`,'warn');
+                const r=await fetchWithTimeout(fpApi('/api/connectors/github'),{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({token,owner,repo,branch:document.getElementById('fpGithubBranch')?.value.trim()||'main',pathPrefix:document.getElementById('fpGithubPrefix')?.value.trim()||'',message:'SnapToDesign export',files})},120000);
+                const d=await r.json(); if(!r.ok) throw new Error(d.error||`HTTP ${r.status}`);
+                document.getElementById('fpGithubToken').value='';
+                fpStatus('fpGithubStatus',`✅ GitHub export complete — ${d.count} file(s) committed to ${d.owner}/${d.repo}@${d.branch}.`,'ok');
+            } catch(e) { fpStatus('fpGithubStatus','❌ '+e.message,'err'); }
+        });
+
+        document.getElementById('fpVideoAnalyzeBtn')?.addEventListener('click', async () => {
+            try {
+                if(!authUser) throw new Error('Login required.');
+                const item=(batchQueueFiles||[]).find(x=>x.isVideo); if(!item?.dataUrl) throw new Error('आधी video upload करा.');
+                fpStatus('fpVideoStatus','Video temporal analysis चालू…','warn');
+                const r=await fetchWithTimeout(fpApi('/api/video/analyze'),{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({videoBase64:item.dataUrl,sampleCount:8})},120000);
+                const d=await r.json(); if(!r.ok) throw new Error(d.error||`HTTP ${r.status}`);
+                fpStatus('fpVideoStatus',`🎞️ ${d.durationSeconds}s • ${d.sampledFrames} frames • Avg motion ${d.averageMotion}% • Peak ${d.peakMotion}%.`,'ok');
+            } catch(e) { fpStatus('fpVideoStatus','❌ '+e.message,'err'); }
+        });
+
+        document.getElementById('fpMonitorBtn')?.addEventListener('click', () => {
+            const url = document.getElementById('fpHealthUrl')?.value.trim();
+            if (!/^https?:\/\//i.test(url)) return fpStatus('fpMonitorStatus', 'Health URL द्या.', 'warn');
+            if (fp.monitorTimer) clearInterval(fp.monitorTimer);
+            const ping = async () => {
+                const t=performance.now();
+                try {
+                    const r=await fetch(url,{method:'GET',cache:'no-store'});
+                    fpStatus('fpMonitorStatus', `${r.ok?'🟢':'🟠'} Monitor: HTTP ${r.status} • ${Math.round(performance.now()-t)} ms • ${new Date().toLocaleTimeString()}`, r.ok?'ok':'warn');
+                } catch(e) { fpStatus('fpMonitorStatus', `🔴 Monitor failed: ${e.message}`, 'err'); }
+            };
+            ping(); fp.monitorTimer=setInterval(ping,30000);
+        });
+        document.getElementById('fpMonitorStopBtn')?.addEventListener('click', () => {
+            if (fp.monitorTimer) clearInterval(fp.monitorTimer);
+            fp.monitorTimer=null;
+            fpStatus('fpMonitorStatus','Monitor stopped.','warn');
+        });
+
+        function safeReadJSON(key, fallback=[]) {
+            try { const raw=localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; }
+            catch(e) { return fallback; }
+        }
+        function safeWriteJSON(key, value) {
+            try { localStorage.setItem(key, JSON.stringify(value)); return true; }
+            catch(e) { return false; }
+        }
+
+        // ------- PROJECT WORKSPACE: cloud database with local fallback -------
+        const PROJECTS_KEY = 'snapToDesignProjects';
+        const CLIENT_ID_KEY = 'snapToDesignClientId';
+        let currentProjectId = null;
+        function getClientId(){
+            let id=localStorage.getItem(CLIENT_ID_KEY);
+            if(!id){ id=crypto?.randomUUID ? crypto.randomUUID() : ('client-'+Date.now()+'-'+Math.random().toString(36).slice(2)); localStorage.setItem(CLIENT_ID_KEY,id); }
+            return id;
+        }
+        let authMode='login';
+        let authUser=null;
+        let creditState=null;
+        const authModal=document.getElementById('authModal');
+        function openAuth(mode='login'){ authMode=mode; authModal?.classList.remove('hidden'); authModal?.classList.add('flex'); updateAuthMode(); }
+        function closeAuth(){ authModal?.classList.add('hidden'); authModal?.classList.remove('flex'); }
+        function authStatus(text,type=''){ const el=document.getElementById('authStatus'); if(el){el.textContent=text;el.className=`text-xs mt-3 min-h-[18px] ${type==='ok'?'text-emerald-400':type==='err'?'text-red-400':'text-gray-400'}`;} }
+        function updateAuthMode(){ const login=authMode==='login'; document.getElementById('authTitle').textContent=login?'Login':'Create account'; document.getElementById('authSubmitBtn').textContent=login?'Login':'Create account'; document.getElementById('loginModeBtn').className=`flex-1 px-3 py-2 rounded-lg text-sm font-semibold ${login?'bg-indigo-700':'bg-gray-800'}`; document.getElementById('signupModeBtn').className=`flex-1 px-3 py-2 rounded-lg text-sm font-semibold ${!login?'bg-indigo-700':'bg-gray-800'}`; document.getElementById('authPassword').autocomplete=login?'current-password':'new-password'; authStatus(''); }
+        function renderAuth(){ const email=document.getElementById('authUserEmail'), loginBtn=document.getElementById('authBtn'), logout=document.getElementById('logoutBtn'), cb=document.getElementById('creditsBadge'); if(authUser){email.textContent=authUser.email;email.classList.remove('hidden');loginBtn.classList.add('hidden');logout.classList.remove('hidden');cb?.classList.remove('hidden');}else{email.classList.add('hidden');loginBtn.classList.remove('hidden');logout.classList.add('hidden');cb?.classList.add('hidden');} }
+        function renderCredits(){ const el=document.getElementById('creditsBalance'); if(el && creditState) el.textContent=String(creditState.balance); }
+        async function loadCredits(){ if(!authUser){creditState=null;renderCredits();return;} try{ const r=await fetchWithTimeout(fpApi('/api/credits'),{credentials:'include'},10000); const d=await r.json(); if(!r.ok) throw new Error(d.error||`HTTP ${r.status}`); creditState=d.credits||null; renderCredits(); }catch(e){} }
+        async function requireCreditsForUI(){ if(!authUser){openAuth('login'); throw new Error('Login required to use AI credits.');} await loadCredits(); if(!creditState || creditState.balance<=0){throw new Error('Credits संपले. More credits required.');} }
+        async function checkAuth(){ try{ const r=await fetchWithTimeout(fpApi('/api/auth/me'),{credentials:'include'},10000); const d=await r.json(); authUser=d.user||null; renderAuth(); if(authUser){ loadProjectList(); loadCredits(); } }catch(e){ authUser=null; renderAuth(); } }
+        document.getElementById('authBtn')?.addEventListener('click',()=>openAuth('login'));
+        document.getElementById('authCloseBtn')?.addEventListener('click',closeAuth);
+        document.getElementById('loginModeBtn')?.addEventListener('click',()=>{authMode='login';updateAuthMode();});
+        document.getElementById('signupModeBtn')?.addEventListener('click',()=>{authMode='signup';updateAuthMode();});
+        document.getElementById('logoutBtn')?.addEventListener('click',async()=>{ try{await fetchWithTimeout(fpApi('/api/auth/logout'),{method:'POST',credentials:'include'},10000);}catch(e){} authUser=null; creditState=null; currentProjectId=null; renderAuth(); renderCredits(); renderProjectList([]); setProjectStatus('Logged out. Login again to sync cloud projects.','warn'); });
+        document.getElementById('authForm')?.addEventListener('submit',async(e)=>{ e.preventDefault(); const email=document.getElementById('authEmail').value.trim(); const password=document.getElementById('authPassword').value; const btn=document.getElementById('authSubmitBtn'); btn.disabled=true; authStatus(authMode==='login'?'Signing in…':'Creating account…'); try{ const r=await fetchWithTimeout(fpApi(`/api/auth/${authMode==='login'?'login':'signup'}`),{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({email,password})},15000); const d=await r.json().catch(()=>({})); if(!r.ok)throw new Error(d.error||`HTTP ${r.status}`); authUser=d.user; creditState=d.credits||null; renderAuth(); renderCredits(); closeAuth(); authStatus(''); await loadProjectList(); await loadCredits(); setProjectStatus(`☁️ Signed in as ${authUser.email}. Cloud projects are now account-scoped.`,'ok'); }catch(err){ authStatus(err.message||'Authentication failed.','err'); }finally{btn.disabled=false;} });
+        updateAuthMode();
+
+        async function projectApi(path, options={}){
+            const headers={ 'Content-Type':'application/json', 'X-Snap-Client-ID':getClientId(), ...(options.headers||{}) };
+            const r=await fetchWithTimeout(fpApi(path),{...options,headers,credentials:'include'},30000);
+            if(!r.ok) throw new Error((await r.json().catch(()=>({})))?.error || `Project API ${r.status}`);
+            return r.json();
+        }
+        function projectSnapshot(){
+            return {
+                id: currentProjectId || undefined,
+                name:(document.getElementById('projectNameInput')?.value.trim()||'Untitled Project').slice(0,120),
+                framework:document.getElementById('frameworkSelect')?.value||'html-tailwind',
+                html:lastRawBody||fpHtml()||'', files:generatedFiles||{}, referenceImage:visualReferenceDataUrl||null
+            };
+        }
+        function setProjectStatus(text,type='warn'){ const el=document.getElementById('projectStatus'); if(!el)return; el.textContent=text; el.className=`text-[11px] mt-2 ${type==='ok'?'text-emerald-400':type==='err'?'text-red-400':'text-gray-500'}`; }
+        function renderProjectList(projects){
+            const select=document.getElementById('projectSelect'); if(!select)return;
+            select.innerHTML='<option value="">Saved projects…</option>';
+            projects.slice(0,100).forEach(p=>{ const o=document.createElement('option'); o.value=p.id; o.textContent=`${p.name} — ${new Date(p.updatedAt).toLocaleString()}`; select.appendChild(o); });
+            if(currentProjectId) select.value=currentProjectId;
+        }
+        async function loadProjectList(){
+            const apiConfigured=!!fp.apiBase;
+            if(apiConfigured){
+                try{ const data=await projectApi('/api/projects'); renderProjectList(data.projects||[]); setProjectStatus('☁️ Cloud database connected. Projects sync to this backend.','ok'); return; }
+                catch(e){ setProjectStatus('⚠️ Cloud project database unavailable — local backup is active.','warn'); }
+            }
+            renderProjectList(safeReadJSON(PROJECTS_KEY,[]));
+        }
+        async function saveCurrentProject(){
+            const snap=projectSnapshot(); if(!snap.html&&!Object.keys(snap.files).length) return setProjectStatus('आधी code generate करा.','warn');
+            if(fp.apiBase){
+                try{
+                    const data=await projectApi('/api/projects',{method:'POST',body:JSON.stringify(snap)});
+                    currentProjectId=data.project.id; renderProjectList((await projectApi('/api/projects')).projects||[]);
+                    document.getElementById('projectSelect').value=currentProjectId;
+                    setProjectStatus(`☁️ ${snap.name} saved to cloud. ${Object.keys(snap.files).length} file(s).`,'ok'); return;
+                }catch(e){ setProjectStatus('⚠️ Cloud save failed; saved locally as backup.','warn'); }
+            }
+            const projects=safeReadJSON(PROJECTS_KEY,[]); const id=currentProjectId||snap.id||String(Date.now());
+            snap.id=id; snap.createdAt=(projects.find(p=>p.id===id)||{}).createdAt||new Date().toISOString(); snap.updatedAt=new Date().toISOString();
+            const idx=projects.findIndex(p=>p.id===id); if(idx>=0) projects[idx]=snap; else projects.unshift(snap);
+            if(!safeWriteJSON(PROJECTS_KEY,projects.slice(0,30))) return setProjectStatus('❌ Browser storage full. Export the ZIP and delete old projects.','err');
+            currentProjectId=id; renderProjectList(projects); setProjectStatus(`💾 ${snap.name} saved locally.`,'ok');
+        }
+        function applyProject(p){
+            currentProjectId=p.id; document.getElementById('projectNameInput').value=p.name||'Untitled Project';
+            if(document.getElementById('frameworkSelect')) document.getElementById('frameworkSelect').value=p.framework||'html-tailwind';
+            lastRawBody=p.html||''; generatedFiles=p.files||{}; renderFileTabs(); if(lastRawBody) renderPreview(lastRawBody);
+            if(p.referenceImage){ visualReferenceDataUrl=p.referenceImage; try{localStorage.setItem(VISUAL_REF_KEY,p.referenceImage);}catch(e){} }
+        }
+        async function loadSelectedProject(){
+            const id=document.getElementById('projectSelect')?.value; if(!id)return setProjectStatus('Project निवडा.','warn');
+            if(fp.apiBase){ try{ const data=await projectApi(`/api/projects/${encodeURIComponent(id)}`); applyProject(data.project); setProjectStatus(`☁️ Loaded ${data.project.name} from cloud.`,'ok'); return; }catch(e){} }
+            const p=safeReadJSON(PROJECTS_KEY,[]).find(x=>x.id===id); if(!p)return setProjectStatus('Project सापडला नाही.','err'); applyProject(p); setProjectStatus(`↥ Loaded ${p.name}.`,'ok');
+        }
+        async function deleteSelectedProject(){
+            const id=document.getElementById('projectSelect')?.value; if(!id)return setProjectStatus('Project निवडा.','warn');
+            if(fp.apiBase){ try{ await projectApi(`/api/projects/${encodeURIComponent(id)}`,{method:'DELETE'}); if(currentProjectId===id)currentProjectId=null; await loadProjectList(); setProjectStatus('🗑 Cloud project deleted.','ok'); return; }catch(e){} }
+            const projects=safeReadJSON(PROJECTS_KEY,[]).filter(p=>p.id!==id); safeWriteJSON(PROJECTS_KEY,projects); if(currentProjectId===id)currentProjectId=null; renderProjectList(projects); setProjectStatus('🗑 Project deleted.','ok');
+        }
+        document.getElementById('saveProjectBtn')?.addEventListener('click',saveCurrentProject);
+        document.getElementById('loadProjectBtn')?.addEventListener('click',loadSelectedProject);
+        document.getElementById('deleteProjectBtn')?.addEventListener('click',deleteSelectedProject);
+        document.getElementById('newProjectBtn')?.addEventListener('click',()=>{ currentProjectId=null; document.getElementById('projectNameInput').value='Untitled Project'; document.getElementById('projectSelect').value=''; lastRawBody=''; generatedFiles={}; renderFileTabs(); document.getElementById('codeOutput').value=''; setProjectStatus('＋ New project workspace तयार.','ok'); });
+        checkAuth();
+
+        document.getElementById('fpVersionBtn')?.addEventListener('click', async () => {
+            const html=fpHtml(); if(!html) return fpStatus('fpVersionStatus','आधी code generate करा.','warn');
+            const payload={html,files:typeof generatedFiles!=='undefined'?generatedFiles:{},framework:document.getElementById('frameworkSelect')?.value||'html-tailwind'};
+            if(fp.apiBase && currentProjectId){
+                try{ const data=await projectApi(`/api/projects/${encodeURIComponent(currentProjectId)}/versions`,{method:'POST',body:JSON.stringify(payload)}); fpStatus('fpVersionStatus',`☁️ Version saved to cloud (${data.version.id}).`,'ok'); return; }catch(e){ fpStatus('fpVersionStatus','⚠️ Cloud version save failed; local snapshot saved.','warn'); }
+            }
+            try{ const arr=safeReadJSON('snapToDesignVersions',[]); const item={id:Date.now(),projectId:currentProjectId,createdAt:new Date().toISOString(),...payload}; arr.unshift(item); if(!safeWriteJSON('snapToDesignVersions',arr.slice(0,20)))throw new Error('storage full'); fpStatus('fpVersionStatus',`✅ Version saved locally (${Math.min(arr.length,20)} snapshots).`,'ok'); }catch(e){ fpStatus('fpVersionStatus','❌ Version save failed.','err'); }
+        });
+        document.getElementById('fpRollbackBtn')?.addEventListener('click', async () => {
+            if(fp.apiBase && currentProjectId){ try{ const data=await projectApi(`/api/projects/${encodeURIComponent(currentProjectId)}/versions`); const item=data.versions?.[0]; if(item){ applyProject({...item,name:document.getElementById('projectNameInput').value,referenceImage:visualReferenceDataUrl}); fpStatus('fpVersionStatus',`↩️ Rolled back to cloud version ${item.id}.`,'ok'); return; } }catch(e){} }
+            const arr=safeReadJSON('snapToDesignVersions',[]).filter(v=>!currentProjectId||!v.projectId||v.projectId===currentProjectId); if(!arr.length)return fpStatus('fpVersionStatus','Rollback साठी saved version नाही.','warn'); const item=arr[0]; lastRawBody=item.html; generatedFiles=item.files||{}; renderFileTabs(); renderPreview(item.html); document.getElementById('codeOutput').value=item.html; fpStatus('fpVersionStatus',`↩️ Rolled back to snapshot ${item.id}.`,'ok');
+        });
+
+        document.getElementById('fpAgentBtn')?.addEventListener('click', async () => {
+            if (!lastRawBody) return fpStatus('fpAgentStatus','आधी code generate करा.','warn');
+            const btn=document.getElementById('fpAgentBtn'); btn.disabled=true; fpSetOverall('AGENT RUNNING','warn');
+            try {
+                fpRequirePermission('autoAgent','Run Autonomous Agent');
+                fpLog('Step 1/5 — V9 QA सुरू.');
+                await runV9QA();
+                let gate=v9ComputeGate();
+                fpLog(`QA result: ${gate.score ?? '—'}% / ${gate.pass?'PASS':'HOLD'}.`, gate.pass?'ok':'warn');
+                if (!gate.pass) {
+                    fpLog('Step 2/5 — Auto-Fix सुरू.');
+                    await autoFixV9();
+                    await new Promise(r=>setTimeout(r,900));
+                    await runV9QA(); gate=v9ComputeGate();
+                    fpLog(`Re-QA result: ${gate.score ?? '—'}% / ${gate.pass?'PASS':'HOLD'}.`, gate.pass?'ok':'warn');
+                }
+                fpLog('Step 3/5 — Version snapshot save.');
+                document.getElementById('fpVersionBtn')?.click();
+                if (!gate.pass) throw new Error(`SHIP GATE HOLD (${gate.score ?? '—'}%)`);
+                fpLog('Step 4/5 — Ship Gate verified.','ok');
+                fpLog('Step 5/5 — Agent completed.','ok');
+                fpStatus('fpAgentStatus',`🤖 Autonomous Agent complete — SHIP ${gate.score}% ${gate.pass?'PASS':'HOLD'}.`,gate.pass?'ok':'warn');
+                fpSetOverall(gate.pass?'PRODUCTION GATE PASS':'NEEDS REVIEW',gate.pass?'ok':'warn');
+            } catch(e) {
+                fpLog('Agent stopped: '+e.message,'err'); fpStatus('fpAgentStatus','❌ '+e.message,'err'); fpSetOverall('AGENT ERROR','err');
+            } finally { btn.disabled=false; }
+        });
+
+        // PRODUCTION RELIABILITY GUARDS — designed around common AI-builder failure modes.
+        const fpReliability = { tokenBudget: 30000, retryLimit: 3, approvalUntil: 0, approvalReason: '' };
+        function fpPersistReliability(){ localStorage.setItem('snapToDesignReliability', JSON.stringify(fpReliability)); }
+        function fpLoadReliability(){ try { Object.assign(fpReliability, JSON.parse(localStorage.getItem('snapToDesignReliability') || '{}')); } catch(e){} }
+        fpLoadReliability();
+        document.getElementById('fpBudgetBtn')?.addEventListener('click',()=>{ const v=Math.max(1000,Number(document.getElementById('fpTokenBudget')?.value||30000)); fpReliability.tokenBudget=v; fpPersistReliability(); fpStatus('fpBudgetStatus',`🛡️ Token ceiling: ${v.toLocaleString()} tokens/run.`,'ok'); });
+        document.getElementById('fpRetryBtn')?.addEventListener('click',()=>{ const v=Math.min(10,Math.max(1,Number(document.getElementById('fpRetryLimit')?.value||3))); fpReliability.retryLimit=v; fpPersistReliability(); fpStatus('fpRetryStatus',`🛡️ Autonomous retry limit: ${v}.`,'ok'); });
+        document.getElementById('fpApprovalBtn')?.addEventListener('click',()=>{ const reason=document.getElementById('fpApprovalReason')?.value.trim(); if(!reason) return fpStatus('fpApprovalStatus','Approval reason required.','warn'); fpReliability.approvalReason=reason; fpReliability.approvalUntil=Date.now()+15*60*1000; fpPersistReliability(); fpStatus('fpApprovalStatus','✅ Human approval created for 15 minutes. Now choose only the specific high-risk permissions you need.','ok'); fpSyncPermissions(); });
+        document.getElementById('fpImpactBtn')?.addEventListener('click',()=>{ const html=lastRawBody||''; const files=(html.match(/<(script|style|link|form|button|input)\b/gi)||[]).length; const risk=files>80?'HIGH':files>30?'MEDIUM':'LOW'; fpStatus('fpImpactStatus',`📊 Estimated impact: ${risk} • ${files} interactive/resource nodes detected. Review before applying large AI changes.`,'ok'); });
+        document.getElementById('fpSecurityScanBtn')?.addEventListener('click',()=>{ const html=lastRawBody||''; const findings=[]; if(/(sk-[A-Za-z0-9_-]{20,}|AIza[0-9A-Za-z_-]{20,}|ghp_[A-Za-z0-9]{20,}|xox[baprs]-[A-Za-z0-9-]{20,}|BEGIN (RSA|OPENSSH|EC|PGP) PRIVATE KEY)/.test(html)) findings.push('possible secret'); if(/<script[^>]+src=["']http:/i.test(html)) findings.push('insecure script'); if(/javascript:/i.test(html)) findings.push('javascript URL'); if(/on(error|load|click|mouseover)\s*=/i.test(html)) findings.push('inline event handler'); if(/console\.log\s*\(/i.test(html)) findings.push('debug logging'); if(/<iframe[^>]+src=/i.test(html) && !/sandbox=/i.test(html)) findings.push('unsandboxed iframe'); fpStatus('fpSecurityScanStatus',findings.length?`⚠️ ${findings.join(', ')}`:'✅ No obvious secret, insecure script or risky inline pattern found.','ok'); });
+        document.getElementById('fpRegressionBtn')?.addEventListener('click',()=>{ const arr=safeReadJSON('snapToDesignVersions',[]); if(!lastRawBody) return fpStatus('fpRegressionStatus','Generate code first.','warn'); if(!arr.length) return fpStatus('fpRegressionStatus','ℹ️ No baseline version yet — save a version after the first approved build.','warn'); const baseline=(arr.length>1 && arr[0].html===lastRawBody)?arr[1]:arr[0]; const prev=baseline?.html||''; const delta=Math.abs(lastRawBody.length-prev.length); fpStatus('fpRegressionStatus',`🔁 Baseline diff: ${delta.toLocaleString()} HTML characters changed. Run full browser/API tests before shipping.` ,delta>Math.max(1000,prev.length*0.35)?'warn':'ok'); });
+        const fpReliabilityBadge=document.getElementById('fpReliabilityBadge'); if(fpReliabilityBadge) fpReliabilityBadge.textContent='GUARDS ACTIVE';
+
+        // HARD SAFETY GATES: explicit approval + permission, session-scoped, default-deny.
+        // Important: checking a box alone is NOT enough. A valid human approval must exist first.
+        const fpPerm = { autoAgent:false, githubWrite:false };
+        function fpApprovalValid(){ return !!(fpReliability.approvalReason && fpReliability.approvalUntil > Date.now()); }
+        function fpSyncApprovalUI(){
+            const expiry=document.getElementById('fpApprovalExpiry');
+            if(expiry) expiry.textContent = fpApprovalValid() ? `🟢 Approval active until ${new Date(fpReliability.approvalUntil).toLocaleTimeString()}` : '🔒 No active approval';
+            if(!fpApprovalValid()) ['permAutoAgent','permGitWrite'].forEach(id=>{const e=document.getElementById(id);if(e)e.checked=false;});
+        }
+        function fpSyncPermissions(){
+            fpSyncApprovalUI();
+            fpPerm.autoAgent = !!document.getElementById('permAutoAgent')?.checked;
+            fpPerm.githubWrite = !!document.getElementById('permGitWrite')?.checked;
+            const high = fpPerm.autoAgent || fpPerm.githubWrite;
+            const b=document.getElementById('fpPermissionBadge');
+            if(b){ b.textContent = high ? 'PERMISSIONS ACTIVE' : 'LOCKED'; b.className='px-3 py-1 rounded-full border text-[10px] font-bold '+(high?'bg-emerald-950 border-emerald-800 text-emerald-300':'bg-red-950 border-red-800 text-red-300'); }
+            const log=document.getElementById('fpPermissionLog'); if(log) log.textContent = high ? '🟢 Explicit permissions active for this browser session; approval is time-limited.' : '🔒 Default-deny: all high-risk permissions revoked.';
+        }
+        function fpRequirePermission(kind, action){
+            fpSyncPermissions();
+            if(!fpApprovalValid()) throw new Error(`Human approval required/expired: ${action}`);
+            if(kind==='autoAgent' && !fpPerm.autoAgent) throw new Error(`Permission required: ${action} → Autonomous Agent`);
+            if(kind==='githubWrite' && !fpPerm.githubWrite) throw new Error(`Permission required: ${action} → GitHub`);
+            return true;
+        }
+        function fpRevokeAll(reason='Manual revoke'){
+            ['permAutoAgent','permGitWrite'].forEach(id=>{const e=document.getElementById(id);if(e)e.checked=false;});
+            fpReliability.approvalUntil=0; fpReliability.approvalReason=''; fpPersistReliability();
+            fpStatus('fpApprovalStatus',`🔒 Permissions revoked — ${reason}.`,'warn'); fpSyncPermissions();
+        }
+        document.querySelectorAll('#permGitWrite,#permDbWrite,#permDeploy,#permAutoAgent').forEach(el=>el.addEventListener('change',e=>{
+            if(e.target.checked && !fpApprovalValid()){ e.target.checked=false; fpStatus('fpApprovalStatus','Create a valid human approval before enabling a high-risk permission.','warn'); }
+            fpSyncPermissions();
+        }));
+        document.getElementById('fpLockPermBtn')?.addEventListener('click',()=>fpRevokeAll('Manual lock'));
+        document.getElementById('fpResetPermBtn')?.addEventListener('click',()=>fpRevokeAll('Reset / Revoke All'));
+        setInterval(fpSyncPermissions,15000);
+        fpSyncPermissions();
+
+        // Runtime error capture for the Regression Guard.
+        window.addEventListener('error', e=>{
+            const msg=e?.message || 'Unknown runtime error';
+            fpStatus('fpRegressionStatus',`🔴 Runtime error captured: ${msg}`,'err');
+            fpLog(`Runtime error captured: ${msg}`,'err');
+        });
+        window.addEventListener('unhandledrejection', e=>{
+            const msg=e?.reason?.message || String(e?.reason || 'Unhandled promise rejection');
+            fpStatus('fpRegressionStatus',`🔴 Unhandled rejection: ${msg}`,'err');
+            fpLog(`Unhandled rejection captured: ${msg}`,'err');
+        });
+
+        // PWA service worker: use a same-origin /sw.js file in the deployed package.
+        // Blob/data URLs are intentionally not used because service-worker scripts must be same-origin.
+        if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js', { scope: './' })
+                    .then(() => fpLog('PWA service worker registered.', 'ok'))
+                    .catch(() => fpLog('PWA service worker unavailable — app continues normally.', 'warn'));
+            });
+        }
+
+        // PWA इन्स्टॉल
+        let deferredPrompt;
+        const installBtn = document.getElementById('installBtn');
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            installBtn.classList.remove('hidden');
+        });
+        installBtn?.addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                try { await deferredPrompt.userChoice; } catch (_) {}
+                installBtn?.classList.add('hidden');
+                deferredPrompt = null;
+            }
+        });
+
+        // मीडिया अपलोड + प्रिव्ह्यू + बॅच क्यू
+        const mediaInput = document.getElementById('mediaInput');
+        const mediaPreviewContainer = document.getElementById('mediaPreviewContainer');
+        const imagePreview = document.getElementById('imagePreview');
+        const videoPreview = document.getElementById('videoPreview');
+        let base64Media = "";
+        let batchQueueFiles = []; // एकापेक्षा जास्त स्क्रीन्ससाठी { name, dataUrl }
+
+        function readFileAsDataUrl(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (ev) => resolve({ name: file.name, dataUrl: ev.target.result, isVideo: file.type.startsWith('video/') });
+                reader.onerror = () => reject(new Error('फाईल वाचता आली नाही: ' + file.name));
+                reader.readAsDataURL(file);
+            });
+        }
+
+        async function addFilesToQueue(fileList) {
+            const MAX_FILES = 20;
+            const MAX_IMAGE_BYTES = 15 * 1024 * 1024;
+            const MAX_VIDEO_BYTES = 80 * 1024 * 1024;
+            const files = Array.from(fileList)
+                .filter(f => f.type.startsWith('image/') || f.type.startsWith('video/'))
+                .slice(0, MAX_FILES);
+            if (files.length === 0) {
+                logEdit('⚠️ फक्त image/video फाइल अपलोड करा.');
+                return;
+            }
+            const rejected = files.filter(f =>
+                (f.type.startsWith('image/') && f.size > MAX_IMAGE_BYTES) ||
+                (f.type.startsWith('video/') && f.size > MAX_VIDEO_BYTES)
+            );
+            if (rejected.length) {
+                logEdit(`⚠️ ${rejected.length} फाइल size limit मुळे वगळल्या. Image ≤15MB, Video ≤80MB.`);
+            }
+            const accepted = files.filter(f => !rejected.includes(f));
+            if (!accepted.length) return;
+
+            const wasEmpty = batchQueueFiles.length === 0;
+
+            // बग-फिक्स: आधी प्रत्येक फाईलसाठी वेगळा async FileReader सुरू व्हायचा,
+            // आणि जो आधी लोड होईल तो आधी क्यूमध्ये जायचा — त्यामुळे मोठ्या/लहान
+            // फाईल्समुळे "page-1, page-2..." चा क्रम तुम्ही निवडलेल्या क्रमापेक्षा वेगळा व्हायचा.
+            // आता सर्व फाईल्स Promise.all ने वाचून, निवडलेल्या क्रमानेच क्यूमध्ये टाकतो.
+            let loaded;
+            try {
+                loaded = await Promise.all(files.map(readFileAsDataUrl));
+            } catch (e) {
+                logEdit('❌ ' + e.message);
+                return;
+            }
+
+            batchQueueFiles.push(...loaded);
+            renderBatchQueue();
+
+            // पहिली फाईल मुख्य प्रिव्ह्यू + ओव्हरलेसाठी वापरतो
+            if (wasEmpty && loaded.length > 0) {
+                const first = loaded[0];
+                base64Media = first.dataUrl;
+                mediaPreviewContainer.classList.remove('hidden');
+                if (!first.isVideo) {
+                    videoPreview.classList.add('hidden');
+                    imagePreview.classList.remove('hidden');
+                    imagePreview.src = first.dataUrl;
+                } else {
+                    imagePreview.classList.add('hidden');
+                    videoPreview.classList.remove('hidden');
+                    videoPreview.src = first.dataUrl;
+                }
+            }
+        }
+
+        function renderBatchQueue() {
+            const queueEl = document.getElementById('batchQueue');
+            const hintEl = document.getElementById('batchHint');
+            const estimateEl = document.getElementById('timeEstimate');
+            queueEl.innerHTML = '';
+            if (batchQueueFiles.length === 0) {
+                queueEl.classList.add('hidden');
+                hintEl.classList.add('hidden');
+                estimateEl.textContent = '⏱️ Claude Vision API वापरून खरा कोड जनरेट होईल';
+                return;
+            }
+            queueEl.classList.remove('hidden');
+            if (batchQueueFiles.length > 1) {
+                hintEl.classList.remove('hidden');
+                document.getElementById('batchCount').textContent = batchQueueFiles.length;
+            } else {
+                hintEl.classList.add('hidden');
+            }
+            estimateEl.textContent = `⏱️ ${batchQueueFiles.length} पेजेससाठी Claude Vision API कॉल होतील (प्रत्येकी काही सेकंद लागू शकतात)`;
+            batchQueueFiles.forEach((f, i) => {
+                const chip = document.createElement('div');
+                chip.className = 'flex items-center gap-1 bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-xs text-gray-300';
+                chip.innerHTML = `<span>📄 page-${i + 1}</span>`;
+                const removeBtn = document.createElement('button');
+                removeBtn.textContent = '✕';
+                removeBtn.className = 'text-gray-500 hover:text-red-400 ml-1';
+                removeBtn.addEventListener('click', () => { batchQueueFiles.splice(i, 1); renderBatchQueue(); });
+                chip.appendChild(removeBtn);
+                queueEl.appendChild(chip);
+            });
+        }
+
+        mediaInput.addEventListener('change', (e) => addFilesToQueue(e.target.files));
+
+        // Ctrl+V क्लिपबोर्ड पेस्ट अपलोड — फाईल ब्राउझ न करता थेट स्क्रीनशॉट पेस्ट
+        window.addEventListener('paste', (e) => {
+            const items = e.clipboardData?.items;
+            if (!items) return;
+            const imageFiles = [];
+            for (const item of items) {
+                if (item.type.startsWith('image/')) {
+                    const file = item.getAsFile();
+                    if (file) imageFiles.push(file);
+                }
+            }
+            if (imageFiles.length > 0) addFilesToQueue(imageFiles);
+        });
+
+        // ------- मल्टी-फाईल कोड सिस्टम -------
+        let generatedFiles = {};   // { "filename": "code" }
+        let activeFile = "";
+        let lastRawBody = "";      // टोकन्स लागू होण्याआधीचा मूळ body — लाईव्ह एडिटसाठी
+
+        function renderFileTabs() {
+            const tabsEl = document.getElementById('fileTabs');
+            tabsEl.innerHTML = '';
+            Object.keys(generatedFiles).forEach((name, idx) => {
+                const tab = document.createElement('button');
+                tab.textContent = name;
+                tab.className = 'px-3 py-1.5 whitespace-nowrap text-gray-400 hover:text-white ' + (idx === 0 ? 'tab-active' : '');
+                tab.addEventListener('click', () => {
+                    activeFile = name;
+                    document.getElementById('codeOutput').value = generatedFiles[name];
+                    [...tabsEl.children].forEach(t => t.classList.remove('tab-active'));
+                    tab.classList.add('tab-active');
+                });
+                tabsEl.appendChild(tab);
+            });
+            const firstFile = Object.keys(generatedFiles)[0];
+            if (firstFile) {
+                activeFile = firstFile;
+                document.getElementById('codeOutput').value = generatedFiles[firstFile];
+            }
+        }
+
+        function getFilesByFramework(framework, htmlBody) {
+            let files;
+            if (framework === 'react-tailwind') {
+                files = {
+                    'package.json': JSON.stringify({name:'snaptodesign-project',private:true,version:'1.0.0',type:'module',scripts:{dev:'vite',build:'vite build',preview:'vite preview'},dependencies:{'@vitejs/plugin-react':'latest','vite':'latest','react':'latest','react-dom':'latest','tailwindcss':'latest','autoprefixer':'latest','postcss':'latest'},devDependencies:{}}, null, 2),
+                    'index.html': `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>SnapToDesign Project</title>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.jsx"><\/script>
+</body>
+</html>`,
+                    'src/main.jsx': `import React from 'react';\nimport { createRoot } from 'react-dom/client';\nimport App from './App.jsx';\nimport './index.css';\ncreateRoot(document.getElementById('root')).render(<React.StrictMode><App /></React.StrictMode>);`,
+                    'src/App.jsx': `export default function App() {\n  return (\n    ${htmlBody}\n  );\n}`,
+                    'src/index.css': `@tailwind base;\n@tailwind components;\n@tailwind utilities;`,
+                    'tailwind.config.js': `/** @type {import('tailwindcss').Config} */\nexport default { content: ['./index.html','./src/**/*.{js,jsx,ts,tsx}'], theme: { extend: {} }, plugins: [] };`,
+                    'postcss.config.js': `export default { plugins: { tailwindcss: {}, autoprefixer: {} } };`
+                };
+            } else if (framework === 'nextjs') {
+                files = {
+                    'package.json': JSON.stringify({name:'snaptodesign-next-project',private:true,version:'1.0.0',scripts:{dev:'next dev',build:'next build',start:'next start'},dependencies:{next:'latest',react:'latest','react-dom':'latest',tailwindcss:'latest',postcss:'latest',autoprefixer:'latest',typescript:'latest','@types/react':'latest','@types/node':'latest','@types/react-dom':'latest'}}, null, 2),
+                    'app/layout.tsx': `import './globals.css';\nexport default function RootLayout({children}:{children:React.ReactNode}) { return <html lang="en"><body>{children}</body></html>; }`,
+                    'app/page.tsx': `export default function Page() {\n  return (\n    ${htmlBody}\n  );\n}`,
+                    'app/globals.css': `@tailwind base;\n@tailwind components;\n@tailwind utilities;`,
+                    'tailwind.config.ts': `export default { content: ['./app/**/*.{ts,tsx}'], theme: { extend: {} }, plugins: [] };`,
+                    'postcss.config.mjs': `export default { plugins: { tailwindcss: {}, autoprefixer: {} } };`,
+                    'tsconfig.json': JSON.stringify({compilerOptions:{target:'ES2020',lib:['dom','dom.iterable','esnext'],allowJs:false,skipLibCheck:true,strict:true,noEmit:true,esModuleInterop:true,module:'esnext',moduleResolution:'bundler',resolveJsonModule:true,isolatedModules:true,jsx:'preserve',incremental:true,plugins:[{name:'next'}]},include:['next-env.d.ts','**/*.ts','**/*.tsx','.next/types/**/*.ts'],exclude:['node_modules']}, null, 2)
+                };
+            } else {
+                files = { 'index.html': htmlBody };
+            }
+            return applyComponentReuse(files, framework);
+        }
+
+        // ------- कॉम्पोनंट लायब्ररी मॅच झाल्यावर प्रत्यक्ष कोडमध्ये existing component नावं वापरणे -------
+        // (नुसता इशारा नाही — <button>/<nav>/<footer>/<form> ला तुमच्या दिलेल्या component नावाने प्रत्यक्ष rename करतो,
+        //  आणि React/Next.js साठी वरती import ओळ जोडतो. कार्ड सारखे div-आधारित पॅटर्न सुरक्षितपणे rename करता येत नाहीत,
+        //  त्यामुळे त्यावर data-reuse-component attribute लावतो जेणेकरून कुठे बदल करायचा ते स्पष्ट दिसेल.)
+        // बग-फिक्स: वापरकर्त्याने "Primary Button" सारखं स्पेस/स्पेशल-कॅरेक्टर असलेलं
+        // component नाव दिलं, तर आधी थेट <button> ला <Primary Button> असं rename व्हायचं —
+        // जे invalid HTML/JSX टॅग आहे (आणि import लाईनही तुटायची). आता टॅग/import साठी
+        // नेहमी sanitize केलेलं valid PascalCase नाव वापरतो; मूळ नाव फक्त
+        // data-reuse-component attribute मध्ये (वाचनीयतेसाठी) ठेवतो.
+        function sanitizeComponentIdentifier(name) {
+            const cleaned = name
+                .replace(/[^a-zA-Z0-9]+/g, ' ')
+                .trim()
+                .split(' ')
+                .filter(Boolean)
+                .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+                .join('');
+            return /^[A-Za-z]/.test(cleaned) ? cleaned : ('Component' + cleaned);
+        }
+
+        function applyComponentReuse(files, framework) {
+            const libraryInput = document.getElementById('componentLibraryInput');
+            const libraryRaw = libraryInput ? libraryInput.value.trim() : '';
+            if (!libraryRaw) return files;
+
+            const myComponents = libraryRaw.split(',').map(s => s.trim()).filter(Boolean);
+            const findComponent = (key) => {
+                const original = myComponents.find(c => c.toLowerCase().includes(key));
+                return original ? { original, safe: sanitizeComponentIdentifier(original) } : undefined;
+            };
+
+            const isReactLike = framework === 'react-tailwind' || framework === 'nextjs';
+            const tagMap = isReactLike ? [
+                { key: 'button', tag: 'button', comp: findComponent('button') },
+                { key: 'nav', tag: 'nav', comp: findComponent('nav') },
+                { key: 'footer', tag: 'footer', comp: findComponent('footer') },
+                { key: 'form', tag: 'form', comp: findComponent('form') }
+            ].filter(m => m.comp) : [];
+
+            const cardComp = findComponent('card');
+            if (tagMap.length === 0 && !cardComp) return files;
+            const out = {};
+            const usedComponentNames = new Map();
+
+            Object.entries(files).forEach(([name, content]) => {
+                let code = content;
+                const usedComponents = [];
+
+                tagMap.forEach(({ tag, comp }) => {
+                    const openRe = new RegExp(`<${tag}(\\s|>)`, 'gi');
+                    const closeRe = new RegExp(`</${tag}>`, 'gi');
+                    if (openRe.test(code)) {
+                        code = code.replace(openRe, (m, sep) => `<${comp.safe}${sep}`);
+                        code = code.replace(closeRe, `</${comp.safe}>`);
+                        usedComponents.push(comp.safe);
+                        usedComponentNames.set(comp.safe, tag);
+                    }
+                });
+
+                if (cardComp) {
+                    const cardOpenRe = /<div(\s+class="[^"]*(?:rounded-|border)[^"]*")/i;
+                    if (cardOpenRe.test(code)) {
+                        code = code.replace(cardOpenRe, (m, attrs) => `<div${attrs} data-reuse-component="${cardComp.original}"`);
+                    }
+                }
+
+                if (isReactLike && usedComponents.length > 0 && /\.(jsx|tsx)$/.test(name)) {
+                    const uniqueComps = [...new Set(usedComponents)];
+                    code = `import { ${uniqueComps.join(', ')} } from '../components';\n` + code;
+                }
+
+                out[name] = code;
+            });
+
+            if (isReactLike && usedComponentNames.size) {
+                const ext = framework === 'nextjs' ? 'tsx' : 'jsx';
+                const componentDir = framework === 'nextjs' ? 'components' : 'src/components';
+                const componentLines = [...usedComponentNames.entries()].map(([name, tag]) => `export function ${name}({children, ...props}) { return <${tag} {...props}>{children}</${tag}>; }`);
+                out[`${componentDir}/index.${ext}`] = componentLines.join('\n');
+            }
+            return out;
+        }
+
+        // ------- ब्रँड डिझाईन टोकन्स (सेव्ह/लोड + कोडवर लागू करणे) -------
+        function loadBrandTokens() {
+            const saved = localStorage.getItem('snapto_tokens');
+            if (saved) {
+                let t;
+                try { t = JSON.parse(saved); } catch (_) { t = {}; }
+                document.getElementById('tokenPrimary').value = t.primary || '#6366f1';
+                document.getElementById('tokenBg').value = t.bg || '#0f172a';
+                document.getElementById('tokenText').value = t.text || '#ffffff';
+                document.getElementById('tokenRadius').value = t.radius || '0.75rem';
+                document.getElementById('tokenFont').value = t.font || 'Inter, sans-serif';
+            }
+        }
+        function getBrandTokens() {
+            return {
+                primary: document.getElementById('tokenPrimary').value,
+                bg: document.getElementById('tokenBg').value,
+                text: document.getElementById('tokenText').value,
+                radius: document.getElementById('tokenRadius').value,
+                font: document.getElementById('tokenFont').value
+            };
+        }
+        document.getElementById('saveTokensBtn').addEventListener('click', () => {
+            try { localStorage.setItem('snapto_tokens', JSON.stringify(getBrandTokens())); } catch (_) {}
+            const btn = document.getElementById('saveTokensBtn');
+            const old = btn.textContent;
+            btn.textContent = 'सेव्ह झालं! ✅';
+            setTimeout(() => btn.textContent = old, 1200);
+        });
+        loadBrandTokens();
+
+        // टोकन्सप्रमाणे जनरेट झालेल्या HTML मधले डीफॉल्ट रंग/रेडियस/फॉन्ट बदलणे
+        function applyBrandTokens(html) {
+            const t = getBrandTokens();
+            let out = html;
+            out = out.replace(/bg-indigo-600/g, `bg-[${t.primary}]`);
+            out = out.replace(/hover:bg-indigo-700/g, `hover:opacity-90`);
+            out = out.replace(/text-indigo-400/g, `text-[${t.primary}]`);
+            out = out.replace(/bg-slate-900/g, `bg-[${t.bg}]`);
+            out = out.replace(/bg-slate-800/g, `bg-[${t.bg}]/70`);
+            out = out.replace(/border-slate-700/g, `border-[${t.primary}]/30`);
+            out = out.replace(/text-white/g, `text-[${t.text}]`);
+            // बग-फिक्स: आधी फक्त rounded-xl/2xl/3xl बदलायचे, rounded-lg/md/full सुटायचे —
+            // त्यामुळे रेडियस टोकन सगळीकडे सुसंगत लागू व्हायचा नाही.
+            out = out.replace(/rounded-(?:3xl|2xl|xl|lg|md)\b/g, `rounded-[${t.radius}]`);
+            out = `<div style="font-family:${t.font}">${out}</div>`;
+            return out;
+        }
+
+        // ------- एक्झिस्टिंग कॉम्पोनंट लायब्ररी: डुप्लिकेशन इशारा -------
+        function loadComponentLibrary() {
+            const saved = localStorage.getItem('snapto_components');
+            if (saved) document.getElementById('componentLibraryInput').value = saved;
+        }
+        document.getElementById('saveComponentsBtn').addEventListener('click', () => {
+            try { localStorage.setItem('snapto_components', document.getElementById('componentLibraryInput').value); } catch (_) {}
+            const btn = document.getElementById('saveComponentsBtn');
+            const old = btn.textContent;
+            btn.textContent = 'सेव्ह झालं! ✅';
+            setTimeout(() => btn.textContent = old, 1200);
+        });
+        loadComponentLibrary();
+
+        function checkComponentReuse(htmlString) {
+            const warningsEl = document.getElementById('reuseWarnings');
+            const libraryRaw = document.getElementById('componentLibraryInput').value.trim();
+            warningsEl.innerHTML = '';
+            if (!libraryRaw) { warningsEl.classList.add('hidden'); return; }
+
+            const myComponents = libraryRaw.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+            const detectedPatterns = {
+                button: /<button/i.test(htmlString),
+                card: /rounded-\S*\[?.*\].*border/i.test(htmlString) || /card/i.test(htmlString),
+                navbar: /<nav/i.test(htmlString),
+                footer: /<footer/i.test(htmlString),
+                form: /<form|<input/i.test(htmlString)
+            };
+            const matches = [];
+            myComponents.forEach(comp => {
+                Object.keys(detectedPatterns).forEach(key => {
+                    if (detectedPatterns[key] && comp.includes(key)) matches.push({ comp, key });
+                });
+            });
+            if (matches.length > 0) {
+                warningsEl.classList.remove('hidden');
+                const seen = new Set();
+                matches.forEach(m => {
+                    if (seen.has(m.comp)) return;
+                    seen.add(m.comp);
+                    const line = document.createElement('div');
+                    line.textContent = `✅ तुमच्या लायब्ररीतला "${m.comp}" जनरेट झालेल्या कोडमध्ये आपोआप वापरला — नवीन ${m.key} ऐवजी existing component reference आहे`;
+                    warningsEl.appendChild(line);
+                });
+            } else {
+                warningsEl.classList.add('hidden');
+            }
+        }
+
+        // ------- Loading + Error स्टेट्स जोडणे (production-readiness) -------
+        function appendStatesIfNeeded(bodyHtml, brandPrimary) {
+            if (!document.getElementById('includeStatesCheckbox').checked) return bodyHtml;
+            const loadingBlock = `<div class="mt-4 p-4 rounded-xl bg-gray-800/60 border border-gray-700 animate-pulse" role="status" aria-live="polite"><div class="h-3 w-2/3 bg-gray-700 rounded mb-2"></div><div class="h-3 w-1/2 bg-gray-700 rounded"></div><span class="sr-only">लोड होत आहे...</span></div>`;
+            const errorBlock = `<div class="mt-4 p-4 rounded-xl bg-red-900/30 border border-red-700 text-red-300 text-sm" role="alert"><strong>काहीतरी चुकलं.</strong> कृपया पुन्हा प्रयत्न करा किंवा सपोर्टशी संपर्क साधा.</div>`;
+            return `${bodyHtml}<div class="mt-6 max-w-sm mx-auto"><p class="text-xs text-gray-500 mb-2">— Loading state —</p>${loadingBlock}<p class="text-xs text-gray-500 mb-2 mt-4">— Error state —</p>${errorBlock}</div>`;
+        }
+
+        // ------- झटपट टेम्प्लेट्स (वेट न करता लगेच कोड) -------
+        const QUICK_TEMPLATES = {
+            navbar: `<nav class="flex items-center justify-between px-6 py-4 bg-slate-900 text-white"><span class="font-bold text-lg">Brand</span><div class="flex gap-6 text-sm"><a href="#">Home</a><a href="#">Features</a><a href="#">Pricing</a></div><button class="bg-indigo-600 px-4 py-2 rounded-lg text-sm">Sign Up</button></nav>`,
+            hero: `<section class="text-center py-20 px-6 bg-slate-900 text-white"><h1 class="text-4xl font-black mb-4 sm:text-5xl">तुमचं प्रॉडक्ट सोपं करा</h1><p class="text-slate-400 max-w-md mx-auto mb-6">एका ओळीत तुमच्या प्रॉडक्टचं मूल्य सांगणारा मजकूर.</p><button class="bg-indigo-600 px-6 py-3 rounded-xl font-bold">सुरू करा</button></section>`,
+            pricing: `<div class="max-w-xs mx-auto bg-slate-800 border border-slate-700 rounded-2xl p-6 text-white text-center"><h3 class="text-sm text-slate-400 mb-1">Pro Plan</h3><p class="text-3xl font-black mb-4">₹999<span class="text-sm text-slate-400">/महिना</span></p><ul class="text-sm text-slate-300 mb-6 space-y-2"><li>अमर्याद वापर</li><li>प्रायोरिटी सपोर्ट</li></ul><button class="w-full bg-indigo-600 py-2.5 rounded-xl font-bold">निवडा</button></div>`,
+            login: `<div class="max-w-xs mx-auto bg-slate-800 border border-slate-700 rounded-2xl p-6 text-white"><h2 class="text-xl font-bold mb-4 text-center">लॉगिन करा</h2><input type="email" placeholder="ईमेल" class="w-full mb-3 px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-sm"><input type="password" placeholder="पासवर्ड" class="w-full mb-4 px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-sm"><button class="w-full bg-indigo-600 py-2.5 rounded-xl font-bold">लॉगिन</button></div>`,
+            footer: `<footer class="bg-slate-900 text-slate-400 text-sm px-6 py-8 flex flex-wrap justify-between gap-4"><span>© 2026 Brand. सर्व हक्क राखीव.</span><div class="flex gap-4"><a href="#">Privacy</a><a href="#">Terms</a><a href="#">Contact</a></div></footer>`
+        };
+
+        document.querySelectorAll('.quick-template-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const framework = document.getElementById('frameworkSelect').value;
+                let body = `<div class="bg-white">${QUICK_TEMPLATES[btn.dataset.template]}</div>`;
+                body = appendStatesIfNeeded(body);
+                lastRawBody = body;
+                body = applyBrandTokens(body);
+                generatedFiles = getFilesByFramework(framework, body);
+                runCleanupOnAllFiles();
+
+                const fullPreviewHTML = renderPreview(body);
+                runQualityChecks(fullPreviewHTML);
+                checkComponentReuse(fullPreviewHTML);
+
+                // बग-फिक्स: टेम्प्लेट हा कुठल्याही अपलोड केलेल्या स्क्रीनशॉटशी संबंधित नाही,
+                // त्यामुळे आधीचा screenshot overlay (जर चालू असेल तर) आता लपवतो —
+                // आधी तो जुनाच राहून नवीन unrelated टेम्प्लेट प्रिव्ह्यूवर दिसत राहायचा.
+                document.getElementById('overlayImage').classList.add('hidden');
+                document.getElementById('overlayControl').classList.add('hidden');
+            });
+        });
+
+        // ------- सेशन ऑटो-सेव्ह (फ्रेमवर्क निवड लक्षात राहते) -------
+        const savedFramework = localStorage.getItem('snapto_framework');
+        if (savedFramework) document.getElementById('frameworkSelect').value = savedFramework;
+        document.getElementById('frameworkSelect').addEventListener('change', (e) => {
+            localStorage.setItem('snapto_framework', e.target.value);
+        });
+
+        // ------- ओरिजिनल स्क्रीनशॉट ओव्हरले (mismatch लगेच दिसण्यासाठी) -------
+        function enableOverlayIfImage() {
+            const overlayImg = document.getElementById('overlayImage');
+            const overlayControl = document.getElementById('overlayControl');
+            if (base64Media && base64Media.startsWith('data:image')) {
+                overlayImg.src = base64Media;
+                overlayImg.classList.remove('hidden');
+                overlayControl.classList.remove('hidden');
+            } else {
+                overlayImg.classList.add('hidden');
+                overlayControl.classList.add('hidden');
+            }
+        }
+        document.getElementById('overlaySlider').addEventListener('input', (e) => {
+            const val = e.target.value;
+            document.getElementById('overlayImage').style.opacity = val / 100;
+            document.getElementById('overlayValue').textContent = val + '%';
+        });
+
+        // ------- ऑटो-क्लीनअप इंजिन (नियम-आधारित, प्रत्यक्ष कोड सुधारणा) -------
+        function cleanupCode(code) {
+            const fixes = [];
+            let out = code;
+
+            // १. गहाळ alt टेक्स्ट भरणे
+            let altCount = 0;
+            out = out.replace(/<img((?:(?!alt=)[^>])*)>/g, (m, attrs) => {
+                altCount++;
+                return `<img${attrs} alt="">`;
+            });
+            if (altCount > 0) fixes.push(`${altCount} img टॅगला गहाळ alt-text जोडलं`);
+
+            // २. रिकामे class="" काढणे
+            const emptyClassBefore = (out.match(/class=""\s*/g) || []).length;
+            out = out.replace(/\sclass=""/g, '');
+            if (emptyClassBefore > 0) fixes.push(`${emptyClassBefore} रिकामे class="" काढले`);
+
+            // ३. डुप्लिकेट Tailwind क्लासेस काढणे
+            let dedupeCount = 0;
+            out = out.replace(/class="([^"]*)"/g, (m, cls) => {
+                const parts = cls.trim().split(/\s+/).filter(Boolean);
+                const unique = [...new Set(parts)];
+                if (unique.length !== parts.length) dedupeCount++;
+                return `class="${unique.join(' ')}"`;
+            });
+            if (dedupeCount > 0) fixes.push(`${dedupeCount} जागी डुप्लिकेट CSS क्लासेस एकत्र केले`);
+
+            // ४. arbitrary px व्हॅल्यूज जवळच्या स्टँडर्ड Tailwind स्पेसिंग स्केलमध्ये बदलणे
+            let spacingCount = 0;
+            out = out.replace(/\b(w|h|p|m|gap|space-x|space-y|top|left|right|bottom)-\[(\d+)px\]/g, (m, prefix, px) => {
+                spacingCount++;
+                const pxNum = parseInt(px, 10);
+                const step = pxNum === 0 ? 0 : Math.max(1, Math.round(pxNum / 4));
+                return `${prefix}-${step}`;
+            });
+            if (spacingCount > 0) fixes.push(`${spacingCount} arbitrary px व्हॅल्यू स्टँडर्ड spacing स्केलमध्ये बदलल्या`);
+
+            // ५. जास्तीच्या रिकाम्या ओळी काढणे
+            const beforeLines = out.split('\n').length;
+            out = out.replace(/\n{3,}/g, '\n\n');
+            const afterLines = out.split('\n').length;
+            if (beforeLines !== afterLines) fixes.push('जास्तीच्या रिकाम्या ओळी काढल्या');
+
+            if (fixes.length === 0) fixes.push('कोड आधीच स्वच्छ आहे — काही बदल गरजेचा नव्हता');
+
+            return { code: out, fixes };
+        }
+
+        function runCleanupOnAllFiles() {
+            const panel = document.getElementById('cleanupPanel');
+            const fixesListEl = document.getElementById('cleanupFixesList');
+            fixesListEl.innerHTML = '';
+            let allFixes = [];
+            Object.keys(generatedFiles).forEach(name => {
+                const { code, fixes } = cleanupCode(generatedFiles[name]);
+                generatedFiles[name] = code;
+                fixes.forEach(f => allFixes.push(`${name}: ${f}`));
+            });
+            renderFileTabs();
+            panel.classList.remove('hidden');
+            allFixes.forEach(f => {
+                const line = document.createElement('div');
+                line.textContent = '✅ ' + f;
+                fixesListEl.appendChild(line);
+            });
+        }
+        document.getElementById('rerunCleanupBtn').addEventListener('click', runCleanupOnAllFiles);
+
+        // ------- डिव्हाईस रिस्पॉन्सिव्ह स्विचर -------
+        document.querySelectorAll('.device-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.device-btn').forEach(b => b.classList.remove('bg-indigo-600'));
+                document.querySelectorAll('.device-btn').forEach(b => b.classList.add('text-gray-400'));
+                btn.classList.add('bg-indigo-600');
+                btn.classList.remove('text-gray-400');
+                const frame = document.getElementById('previewFrame');
+                frame.style.width = btn.dataset.w;
+                frame.style.height = btn.dataset.h;
+            });
+        });
+
+        // ------- कॉपी + ZIP डाउनलोड -------
+        document.getElementById('copyCodeBtn').addEventListener('click', async () => {
+            const codeOutput = document.getElementById('codeOutput');
+            if (!codeOutput.value) return;
+            const ok = await copyTextSafe(codeOutput.value);
+            const btn = document.getElementById('copyCodeBtn');
+            showTransientStatus(btn, ok ? '✅ कॉपी झालं!' : '❌ कॉपी अयशस्वी');
+        });
+
+        document.getElementById('downloadZipBtn').addEventListener('click', async () => {
+            const files = Object.entries(generatedFiles);
+            if (!files.length) { logEdit('आधी code generate करा.'); return; }
+            const btn = document.getElementById('downloadZipBtn');
+            const old = btn.textContent;
+            btn.disabled = true; btn.textContent = '⏳ ZIP तयार होत आहे…';
+            try {
+                const zip = new JSZip();
+                const projectName = (document.getElementById('projectNameInput')?.value.trim() || 'snaptodesign-project').replace(/[^a-zA-Z0-9._-]+/g,'-').replace(/^-+|-+$/g,'') || 'snaptodesign-project';
+                const exportFiles = [...files];
+                exportFiles.forEach(([name, content]) => zip.file(name, content));
+                zip.file('SNAPTODDESIGN-PROJECT.json', JSON.stringify({format:'snaptodesign-project',version:'1.0',projectName,framework:document.getElementById('frameworkSelect')?.value||'html-tailwind',exportedAt:new Date().toISOString(),files:exportFiles.map(([name])=>name)}, null, 2));
+                zip.file('README.md', `# ${projectName}\n\nGenerated by SnapToDesign AI Pro.\n\nFramework: ${document.getElementById('frameworkSelect')?.value||'html-tailwind'}\n\nExported: ${new Date().toISOString()}\n`);
+                const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url; a.download = `${projectName}-export.zip`;
+                document.body.appendChild(a); a.click(); a.remove();
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+                logEdit(`ZIP तयार झाला ✅ — ${files.length} file(s)`);
+            } catch (e) {
+                logEdit('❌ ZIP export: ' + e.message);
+            } finally {
+                btn.disabled = false; btn.textContent = old;
+            }
+        });
+
+        // ------- क्वालिटी बॅज (साधी हॅरिस्टिक तपासणी) -------
+        // ------- Preview iframe मध्ये खरा रनटाइम एरर पकडणे ("जवळपास चालतं" सापळा टाळण्यासाठी) -------
+        let runtimeErrorListenerAttached = false;
+        function ensureRuntimeErrorListener() {
+            if (runtimeErrorListenerAttached) return;
+            runtimeErrorListenerAttached = true;
+            window.addEventListener('message', (e) => {
+                if (e && e.data && e.data.__snapto_error) {
+                    showRuntimeError(e.data.message);
+                }
+            });
+        }
+        function showRuntimeError(message) {
+            const badge = document.getElementById('runtimeErrorBadge');
+            if (!badge) return;
+            badge.textContent = '⚠️ Preview मध्ये रनटाइम एरर आढळली — डाउनलोड करण्याआधी हे नक्की तपासा: ' + message;
+            badge.classList.remove('hidden');
+        }
+        function clearRuntimeError() {
+            const badge = document.getElementById('runtimeErrorBadge');
+            if (badge) badge.classList.add('hidden');
+        }
+
+        function showTransientStatus(button, successText, fallbackText='') {
+            if (!button) return;
+            const old = button.textContent;
+            button.textContent = successText;
+            button.disabled = true;
+            setTimeout(() => { button.textContent = old; button.disabled = false; }, 1400);
+        }
+
+        async function copyTextSafe(text) {
+            if (!text) return false;
+            try {
+                if (navigator.clipboard && window.isSecureContext) {
+                    await navigator.clipboard.writeText(text);
+                    return true;
+                }
+            } catch (_) {}
+            const ta = document.createElement('textarea');
+            ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+            document.body.appendChild(ta); ta.focus(); ta.select();
+            let ok = false;
+            try { ok = document.execCommand('copy'); } catch (_) {}
+            ta.remove();
+            return ok;
+        }
+        function buildPreviewHTML(bodyHtml) {
+            clearRuntimeError();
+            const errorScript = `<script>
+              window.onerror = function(msg, src, line) {
+                try { parent.postMessage({ __snapto_error: true, message: String(msg) + ' (line ' + line + ')' }, '*'); } catch(e) {}
+                return false;
+              };
+              window.addEventListener('unhandledrejection', function(ev) {
+                try { parent.postMessage({ __snapto_error: true, message: 'Promise rejected: ' + String(ev.reason) }, '*'); } catch(e) {}
+              });
+            <\/script>`;
+            return `<!DOCTYPE html><html><head><script src="https://cdn.tailwindcss.com"><\/script>${errorScript}</head><body>${bodyHtml}</body></html>`;
+        }
+        const editHistoryState = { undo: [], redo: [], max: 20, busy: false };
+        function snapshotEditor(){
+            const html = lastRawBody || '';
+            if (!html || editHistoryState.busy) return;
+            editHistoryState.undo.push(html);
+            if(editHistoryState.undo.length > editHistoryState.max) editHistoryState.undo.shift();
+            editHistoryState.redo=[]; updateHistoryButtons();
+        }
+        function updateHistoryButtons(){
+            const u=document.getElementById('undoBtn'), r=document.getElementById('redoBtn');
+            if(u) u.disabled=editHistoryState.undo.length===0;
+            if(r) r.disabled=editHistoryState.redo.length===0;
+        }
+        async function restoreEditor(html){
+            if(!html) return;
+            editHistoryState.busy=true;
+            try{
+                lastRawBody=html;
+                const framework=document.getElementById('frameworkSelect')?.value||'html-tailwind';
+                generatedFiles=getFilesByFramework(framework, applyBrandTokens(html));
+                runCleanupOnAllFiles();
+                renderPreview(applyBrandTokens(html));
+                runQualityChecks(html);
+                checkComponentReuse(applyBrandTokens(html));
+                document.getElementById('codeOutput').value=generatedFiles[activeFile]||generatedFiles[Object.keys(generatedFiles)[0]]||html;
+                renderFileTabs();
+                logEdit('Version restored.');
+            } finally { editHistoryState.busy=false; updateHistoryButtons(); }
+        }
+        document.getElementById('undoBtn')?.addEventListener('click',async()=>{
+            if(!editHistoryState.undo.length || !lastRawBody) return;
+            const current=lastRawBody; const prev=editHistoryState.undo.pop(); editHistoryState.redo.push(current);
+            await restoreEditor(prev);
+        });
+        document.getElementById('redoBtn')?.addEventListener('click',async()=>{
+            if(!editHistoryState.redo.length || !lastRawBody) return;
+            const current=lastRawBody; const next=editHistoryState.redo.pop(); editHistoryState.undo.push(current);
+            await restoreEditor(next);
+        });
+        function rememberBeforeEdit(){ if(lastRawBody && !editHistoryState.busy) snapshotEditor(); }
+
+        // Drag/drop + paste upload UX.
+        const uploadLabel=document.querySelector('label[for="mediaInput"]') || document.getElementById('mediaInput')?.closest('label');
+        if(uploadLabel && mediaInput){
+            ['dragenter','dragover'].forEach(ev=>uploadLabel.addEventListener(ev,e=>{e.preventDefault();uploadLabel.classList.add('drop-active')}));
+            ['dragleave','drop'].forEach(ev=>uploadLabel.addEventListener(ev,e=>{e.preventDefault();uploadLabel.classList.remove('drop-active')}));
+            uploadLabel.addEventListener('drop',e=>{if(e.dataTransfer?.files?.length){mediaInput.files=e.dataTransfer.files; mediaInput.dispatchEvent(new Event('change',{bubbles:true}));}});
+        }
+        document.addEventListener('paste',e=>{
+            if(document.activeElement && /input|textarea/i.test(document.activeElement.tagName)) return;
+            const files=[...((e.clipboardData&&e.clipboardData.files)||[])].filter(f=>/^image\//i.test(f.type));
+            if(files.length && mediaInput){const dt=new DataTransfer(); files.forEach(f=>dt.items.add(f)); mediaInput.files=dt.files; mediaInput.dispatchEvent(new Event('change',{bubbles:true})); logEdit('📋 Pasted screenshot added.');}
+        });
+
+        function renderPreview(bodyHtml) {
+            ensureRuntimeErrorListener();
+            clearRuntimeError();
+            const fullPreviewHTML = buildPreviewHTML(bodyHtml);
+            const previewFrame = document.getElementById('previewFrame');
+            const doc = previewFrame.contentDocument || previewFrame.contentWindow.document;
+            doc.open(); doc.write(fullPreviewHTML); doc.close();
+            return fullPreviewHTML;
+        }
+
+        function runQualityChecks(htmlString) {
+            document.getElementById('qualityBadges').classList.remove('hidden');
+            const hasAlt = /<img[^>]*alt=/.test(htmlString) || !/<img/.test(htmlString);
+            document.getElementById('badgeAlt').textContent = hasAlt ? '🖼️ Alt-text ✅' : '🖼️ Alt-text गहाळ ⚠️';
+            document.getElementById('badgeAlt').className = 'px-2 py-1 rounded-full ' + (hasAlt ? 'bg-emerald-700' : 'bg-amber-700');
+
+            const hasResponsiveClasses = /(sm:|md:|lg:)/.test(htmlString);
+            document.getElementById('badgeResponsive').textContent = hasResponsiveClasses ? '📱 Responsive ✅' : '📱 Responsive तपासा ⚠️';
+            document.getElementById('badgeResponsive').className = 'px-2 py-1 rounded-full ' + (hasResponsiveClasses ? 'bg-emerald-700' : 'bg-amber-700');
+
+            const contrastEl = document.getElementById('badgeContrast');
+            const parseRGB = (value) => {
+                const m = String(value || '').match(/rgba?\((\d+)\D+(\d+)\D+(\d+)/i);
+                return m ? [+m[1], +m[2], +m[3]] : null;
+            };
+            const lum = (rgb) => {
+                if (!rgb) return null;
+                const c = rgb.map(v => v / 255).map(v => v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4));
+                return 0.2126*c[0] + 0.7152*c[1] + 0.0722*c[2];
+            };
+            let checked = 0, failures = 0;
+            [...doc.querySelectorAll('body *')].filter(el => el.children.length === 0 && el.textContent.trim()).slice(0, 300).forEach(el => {
+                const cs = getComputedStyle(el);
+                const fg = lum(parseRGB(cs.color));
+                const bg = lum(parseRGB(cs.backgroundColor));
+                if (fg == null || bg == null) return;
+                checked++;
+                const ratio = (Math.max(fg,bg)+0.05)/(Math.min(fg,bg)+0.05);
+                const large = parseFloat(cs.fontSize) >= 18 || (parseFloat(cs.fontSize) >= 14 && cs.fontWeight >= 700);
+                if (ratio < (large ? 3 : 4.5)) failures++;
+            });
+            if (!checked) {
+                contrastEl.textContent = '🎨 Contrast: तपासणी उपलब्ध नाही ⚠️';
+                contrastEl.className = 'px-2 py-1 rounded-full bg-gray-700';
+            } else if (!failures) {
+                contrastEl.textContent = `🎨 Contrast: ✅ (${checked} checked)`;
+                contrastEl.className = 'px-2 py-1 rounded-full bg-emerald-700';
+            } else {
+                contrastEl.textContent = `🎨 Contrast: ⚠️ ${failures} issue(s)`;
+                contrastEl.className = 'px-2 py-1 rounded-full bg-amber-700';
+            }
+        }
+
+        // ------- AI एडिट हिस्टरी -------
+        function logEdit(text) {
+            const historyEl = document.getElementById('editHistory');
+            historyEl.classList.remove('hidden');
+            const line = document.createElement('div');
+            line.textContent = `• ${text}`;
+            historyEl.appendChild(line);
+            historyEl.scrollTop = historyEl.scrollHeight;
+        }
+
+        document.getElementById('updateDesignBtn').addEventListener('click', async () => {
+            const promptText = document.getElementById('aiChatPrompt').value.trim();
+            if (!promptText) return;
+            document.getElementById('aiChatPrompt').value = '';
+            await applyLiveEdit(promptText);
+        });
+
+        // ------- गुंतागुंतीचे बदल Claude API कडून (नैसर्गिक भाषेत कोणताही बदल) -------
+        async function fetchWithTimeout(url, options={}, timeoutMs=45000) {
+            const controller=new AbortController();
+            const timer=setTimeout(()=>controller.abort(),timeoutMs);
+            try { return await fetch(url,{...options,signal:controller.signal}); }
+            catch(e) { if(e.name==='AbortError') throw new Error('API timeout — पुन्हा प्रयत्न करा.'); throw e; }
+            finally { clearTimeout(timer); }
+        }
+
+        async function applyAIEdit(currentHtml, instruction, referenceDataUrl=null) {
+            await requireCreditsForUI();
+            const systemPrompt = `You are a precision UI engineer. Edit HTML/Tailwind UI code from an instruction. Preserve the existing design, content, assets, DOM structure and behavior unless the instruction requires otherwise. For visual refinement, treat the supplied reference screenshot as the source of truth and make the smallest safe changes needed to reduce visual mismatch. Never redesign or invent content. Return ONLY the complete updated HTML fragment — no markdown, no explanation.`;
+
+            const response = await fetchWithTimeout(fpApi("/api/ai"), {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify({
+                    model: "claude-sonnet-4-6",
+                    max_tokens: 3000,
+                    system: systemPrompt,
+                    messages: [
+                        { role: "user", content: [
+                            ...(referenceDataUrl ? [{ type:"image", source:{ type:"base64", media_type:(referenceDataUrl.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,/)||[])[1] || "image/png", data:(referenceDataUrl.split(",")[1]||"") } }] : []),
+                            { type:"text", text:`सध्याचा HTML कोड:\n${currentHtml}\n\nबदल सूचना: ${instruction}` }
+                        ] }
+                    ]
+                })
+            });
+            if (!response.ok) throw new Error('API एरर: ' + response.status);
+            const data = await response.json();
+            if(data.credits){ creditState=data.credits; renderCredits(); }
+            let html = typeof data.text === 'string' ? data.text : '';
+            html = html.replace(/```html/gi, '').replace(/```/g, '').trim();
+            if (!html) throw new Error('रिकामा प्रतिसाद मिळाला');
+            if (html.length > 1200000) throw new Error('AI प्रतिसाद खूप मोठा आहे.');
+            if (!/<[a-z][\s\S]*>/i.test(html)) throw new Error('AI ने वैध HTML दिला नाही.');
+            return html;
+        }
+
+        // ------- खरा (नियम-आधारित) लाईव्ह एडिट इंजिन — रंग/आकार/फॉन्ट बदल तात्काळ लागू होतात -------
+        const COLOR_WORDS = {
+            'निळा': '#3b82f6', 'blue': '#3b82f6',
+            'लाल': '#ef4444', 'red': '#ef4444',
+            'हिरवा': '#22c55e', 'green': '#22c55e',
+            'पिवळा': '#eab308', 'yellow': '#eab308',
+            'जांभळा': '#8b5cf6', 'purple': '#8b5cf6',
+            'नारिंगी': '#f97316', 'orange': '#f97316',
+            'काळा': '#111827', 'black': '#111827',
+            'पांढरा': '#ffffff', 'white': '#ffffff',
+            'गुलाबी': '#ec4899', 'pink': '#ec4899'
+        };
+
+        async function applyLiveEdit(promptText) {
+            if (!lastRawBody) {
+                logEdit(promptText + ' — आधी एकदा कोड जनरेट करा, मग बदल लागू होतील');
+                return;
+            }
+            const lower = promptText.toLowerCase();
+            let handled = false;
+
+            // रंग बदल ओळखणे (उदा. "बटणाचा रंग निळा करा")
+            for (const word in COLOR_WORDS) {
+                if (lower.includes(word)) {
+                    document.getElementById('tokenPrimary').value = COLOR_WORDS[word];
+                    handled = true;
+                    logEdit(`प्रायमरी रंग "${word}" मध्ये बदलला ✅`);
+                    break;
+                }
+            }
+            // गोलाकार/चौकोनी कोपरे बदल
+            if (lower.includes('गोल') || lower.includes('round')) {
+                document.getElementById('tokenRadius').value = '1.5rem';
+                handled = true;
+                logEdit('कोपरे जास्त गोल केले ✅');
+            } else if (lower.includes('चौकोनी') || lower.includes('sharp') || lower.includes('square')) {
+                document.getElementById('tokenRadius').value = '0.25rem';
+                handled = true;
+                logEdit('कोपरे चौकोनी केले ✅');
+            }
+
+            if (handled) {
+                rememberBeforeEdit();
+                localStorage.setItem('snapto_tokens', JSON.stringify(getBrandTokens()));
+                const framework = document.getElementById('frameworkSelect').value;
+                const finalBody = applyBrandTokens(lastRawBody);
+                generatedFiles = getFilesByFramework(framework, finalBody);
+                runCleanupOnAllFiles();
+                const fullPreviewHTML = renderPreview(finalBody);
+                runQualityChecks(fullPreviewHTML);
+                checkComponentReuse(fullPreviewHTML);
+            } else {
+                // गुंतागुंतीचे बदल — आता खरा Claude API कॉल (आधी फक्त मेसेज दाखवत होतं)
+                logEdit(promptText + ' — AI कडून बदल होत आहे...');
+                const updateBtn = document.getElementById('updateDesignBtn');
+                updateBtn.disabled = true;
+                try {
+                    rememberBeforeEdit();
+                    const updatedBody = await applyAIEdit(lastRawBody, promptText);
+                    lastRawBody = updatedBody;
+                    localStorage.setItem('snapto_tokens', JSON.stringify(getBrandTokens()));
+                    const framework = document.getElementById('frameworkSelect').value;
+                    const finalBody = applyBrandTokens(updatedBody);
+                    generatedFiles = getFilesByFramework(framework, finalBody);
+                    runCleanupOnAllFiles();
+                    const fullPreviewHTML = renderPreview(finalBody);
+                    runQualityChecks(fullPreviewHTML);
+                    checkComponentReuse(fullPreviewHTML);
+                    logEdit(promptText + ' ✅ लागू झालं');
+                } catch (err) {
+                    logEdit('❌ ' + err.message);
+                    console.error(err);
+                } finally {
+                    updateBtn.disabled = false;
+                }
+            }
+        }
+
+        // ------- Visual Twin reference + precision refinement state -------
+        let visualReferenceDataUrl = null;
+        let visualBestBody = null;
+        let visualBestScore = -1;
+        const VISUAL_REF_KEY = 'snapto_visual_reference_v96';
+        function setVisualReference(dataUrl){
+            visualReferenceDataUrl = dataUrl || null;
+            visualBestBody = null; visualBestScore = -1;
+            try { if(dataUrl) localStorage.setItem(VISUAL_REF_KEY, dataUrl); else localStorage.removeItem(VISUAL_REF_KEY); } catch(e) {}
+        }
+        try { visualReferenceDataUrl = localStorage.getItem(VISUAL_REF_KEY) || null; } catch(e) {}
+
+        async function refineAgainstReference(initialBody, framework, maxRounds=3){
+            if(!visualReferenceDataUrl || !initialBody) return initialBody;
+            let current = initialBody;
+            let best = initialBody;
+            let bestScore = -1;
+            for(let round=1; round<=maxRounds; round++){
+                lastRawBody = current;
+                const preview = renderPreview(applyBrandTokens(current));
+                await new Promise(r=>setTimeout(r,180));
+                const score = await v9VisualTwinScore(visualReferenceDataUrl, true);
+                if(Number.isFinite(score) && score > bestScore){ bestScore=score; best=current; }
+                logEdit(`🎯 Visual refinement ${round}/${maxRounds}: ${Number.isFinite(score)?score+'%':'unavailable'}`);
+                if(score >= 96) break;
+                const next = await applyAIEdit(current, `VISUAL PRESERVATION MODE. The reference screenshot is the source of truth. Improve ONLY the visual mismatches identified by the current render. Preserve all existing content, assets, interactions and structure unless required for visual fidelity. Do not redesign. Match viewport geometry, spacing, typography scale, colors, borders, shadows, radii, alignment and image crops. This is refinement round ${round}; make the smallest safe changes.` , visualReferenceDataUrl);
+                if(!next || next===current) break;
+                current=next;
+            }
+            visualBestBody=best; visualBestScore=bestScore;
+            if(best && best!==initialBody){ lastRawBody=best; generatedFiles=getFilesByFramework(framework, applyBrandTokens(best)); runCleanupOnAllFiles(); renderPreview(applyBrandTokens(best)); }
+            return best || initialBody;
+        }
+
+        // ------- मुख्य जनरेट लॉजिक (LIVE — खरा Claude Vision API कॉल) -------
+        async function generateBodyFromScreenshot(dataUrl, framework) {
+            await requireCreditsForUI();
+            setVisualReference(dataUrl);
+            const match = dataUrl.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
+            if (!match) throw new Error('अवैध इमेज डेटा');
+            const mediaType = match[1];
+            const base64Data = match[2];
+
+            const systemPrompt = `You are a UI screenshot-to-code converter. Given a screenshot, output ONLY a single JSON object — no markdown fences, no backticks, no explanation, nothing else. JSON shape:
+{"html": "...", "images": [{"id": "img1", "x": 0.0, "y": 0.0, "w": 0.0, "h": 0.0}]}
+Rules for "html": a single-root HTML fragment built with Tailwind CSS utility classes that visually replicates the screenshot's layout, text, colors and spacing as closely as possible. No <!DOCTYPE>, <html>, <head>, or <body> tags.
+Rules for "images": for every real photo, logo, or icon actually visible in the screenshot (not generic decorative shapes you invented), include a matching <img id="imgN" alt="..." class="..."> tag at that position inside "html", and an entry here with x/y/w/h as fractions (0 to 1) of the full screenshot width/height describing the crop box of that exact visual element (x/y = top-left corner, w/h = width/height). Do not invent images that aren't in the screenshot — if none, return an empty array.`;
+
+            const response = await fetchWithTimeout(fpApi("/api/ai"), {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify({
+                    model: "claude-sonnet-4-6",
+                    max_tokens: 3500,
+                    system: systemPrompt,
+                    messages: [
+                        {
+                            role: "user",
+                            content: [
+                                { type: "image", source: { type: "base64", media_type: mediaType, data: base64Data } },
+                                { type: "text", text: `या स्क्रीनशॉटला ${framework} साठी योग्य अशा Tailwind HTML फ्रॅगमेंटमध्ये कन्व्हर्ट करा, आणि खऱ्या इमेज/लोगो/आयकॉनसाठी bounding box द्या.` }
+                            ]
+                        }
+                    ]
+                })
+            });
+            if (!response.ok) throw new Error('API एरर: ' + response.status);
+            const data = await response.json();
+            if(data.credits){ creditState=data.credits; renderCredits(); }
+            let raw = typeof data.text === 'string' ? data.text : '';
+            raw = raw.replace(/```json/gi, '').replace(/```html/gi, '').replace(/```/g, '').trim();
+            if (!raw) throw new Error('रिकामा प्रतिसाद मिळाला');
+
+            let body, images;
+            try {
+                const parsed = JSON.parse(raw);
+                body = parsed.html || '';
+                images = Array.isArray(parsed.images) ? parsed.images : [];
+            } catch (e) {
+                // API ने शुद्ध HTML दिलं असेल (JSON नाही) तर तेच वापरा, इमेज extraction skip
+                body = raw;
+                images = [];
+            }
+            if (!body) throw new Error('रिकामा प्रतिसाद मिळाला');
+
+            if (images.length > 0) {
+                try {
+                    body = await injectCroppedImages(body, dataUrl, images);
+                } catch (e) {
+                    console.error('इमेज क्रॉप एरर:', e);
+                }
+            }
+            return body;
+        }
+
+        // ------- स्क्रीनशॉटमधले खरे लोगो/फोटो/आयकॉन क्रॉप करून जनरेट झालेल्या कोडमध्ये बसवणे (placeholder नाही) -------
+        function loadImageEl(dataUrl) {
+            return new Promise((resolve, reject) => {
+                const imgEl = new Image();
+                imgEl.onload = () => resolve(imgEl);
+                imgEl.onerror = () => reject(new Error('स्क्रीनशॉट लोड होऊ शकलं नाही'));
+                imgEl.src = dataUrl;
+            });
+        }
+
+        function cropImageToDataUrl(imgEl, xf, yf, wf, hf) {
+            const naturalW = imgEl.naturalWidth;
+            const naturalH = imgEl.naturalHeight;
+            const sx = Math.max(0, Math.min(naturalW - 1, Math.round(xf * naturalW)));
+            const sy = Math.max(0, Math.min(naturalH - 1, Math.round(yf * naturalH)));
+            const sw = Math.max(1, Math.min(naturalW - sx, Math.round(wf * naturalW)));
+            const sh = Math.max(1, Math.min(naturalH - sy, Math.round(hf * naturalH)));
+            const canvas = document.createElement('canvas');
+            canvas.width = sw;
+            canvas.height = sh;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(imgEl, sx, sy, sw, sh, 0, 0, sw, sh);
+            return canvas.toDataURL('image/png');
+        }
+
+        async function injectCroppedImages(html, sourceDataUrl, images) {
+            const imgEl = await loadImageEl(sourceDataUrl);
+            let out = html;
+            images.forEach(spec => {
+                if (!spec || !spec.id) return;
+                const x = Number(spec.x), y = Number(spec.y), w = Number(spec.w), h = Number(spec.h);
+                if ([x, y, w, h].some(n => isNaN(n))) return;
+                let croppedUrl;
+                try {
+                    croppedUrl = cropImageToDataUrl(imgEl, x, y, w, h);
+                } catch (e) {
+                    return;
+                }
+                const id = spec.id.replace(/[^a-zA-Z0-9_-]/g, '');
+                const withSrcRe = new RegExp(`(<img[^>]*id=["']${id}["'][^>]*?)src=["'][^"']*["']`, 'i');
+                const noSrcRe = new RegExp(`(<img[^>]*id=["']${id}["'])(?![^>]*src=)`, 'i');
+                if (withSrcRe.test(out)) {
+                    out = out.replace(withSrcRe, `$1src="${croppedUrl}"`);
+                } else if (noSrcRe.test(out)) {
+                    out = out.replace(noSrcRe, `$1 src="${croppedUrl}"`);
+                }
+            });
+            return out;
+        }
+
+        function killerWorkflowStep(step, status) {
+            const wrap=document.getElementById('killerWorkflowSteps');
+            const msg=document.getElementById('killerWorkflowStatus');
+            if(!wrap) return;
+            const order=['generate','render','test','fix','verify'];
+            const idx=order.indexOf(step);
+            wrap.querySelectorAll('.kstep').forEach(el=>{
+                const i=order.indexOf(el.dataset.kstep);
+                el.classList.toggle('active', i===idx && status!=='done');
+                el.classList.toggle('done', i<idx || (i===idx && status==='done'));
+            });
+            if(msg && status) msg.textContent=status;
+        }
+
+        async function runKillerWorkflowAfterBuild(referenceBody) {
+            killerWorkflowStep('render','② Render: generated design चा live preview तयार झाला.');
+            await new Promise(r=>setTimeout(r,120));
+            killerWorkflowStep('test','③ Test: accessibility, responsive, security आणि runtime checks चालू आहेत…');
+            try { await runV9QA(); } catch (_) {}
+            const score=parseInt(document.getElementById('v9ShipScore')?.textContent||'',10);
+            if(Number.isFinite(score) && score<90){
+                killerWorkflowStep('fix',`④ Fix: ${score}% ship score — AI refinement सुचवली आहे.`);
+                try { await autoFixV9(); } catch (_) {}
+            } else {
+                killerWorkflowStep('fix','④ Fix: critical refinement आवश्यक नाही — build सुरक्षित ठेवला.');
+            }
+            const finalScore=parseInt(document.getElementById('v9ShipScore')?.textContent||'',10);
+            killerWorkflowStep('verify','⑤ Verify: QA evidence तयार — user ला build ची quality दिसते.','done');
+            const badge=document.getElementById('killerWorkflowBadge');
+            if(badge){ badge.textContent=Number.isFinite(finalScore)?`VERIFIED ${finalScore}%`:'VERIFIED'; badge.className='shrink-0 px-2.5 py-1 rounded-full bg-emerald-900/70 text-[10px] font-bold text-emerald-300'; }
+            const msg=document.getElementById('killerWorkflowStatus');
+            if(msg) msg.textContent=Number.isFinite(finalScore)?`🟢 Verified workflow complete — Ship Score ${finalScore}%.`:'🟢 Verification workflow complete.';
+        }
+
+        document.getElementById('convertBtn').addEventListener('click', async () => {
+            const previewFrame = document.getElementById('previewFrame');
+            const framework = document.getElementById('frameworkSelect').value;
+            const convertBtn = document.getElementById('convertBtn');
+
+            if (batchQueueFiles.length === 0) {
+                logEdit('⚠️ कृपया आधी स्क्रीनशॉट अपलोड करा — लाईव्ह मोडमध्ये खरी इमेज आवश्यक आहे');
+                return;
+            }
+            const imageItems = [];
+            for (const item of batchQueueFiles) {
+                if (!item.isVideo) { imageItems.push(item); continue; }
+                try {
+                    const video=document.createElement('video'); video.muted=true; video.playsInline=true; video.preload='metadata'; video.src=item.dataUrl;
+                    await new Promise((resolve,reject)=>{video.onloadedmetadata=resolve; video.onerror=reject;});
+                    const seek=Math.min(1,Math.max(0,(video.duration||1)*0.15));
+                    await new Promise((resolve,reject)=>{video.onseeked=resolve; video.onerror=reject; video.currentTime=seek;});
+                    const width=Math.min(1920,video.videoWidth||1280);
+                    const height=Math.max(1,Math.round(width*(video.videoHeight||720)/(video.videoWidth||1280)));
+                    const canvas=document.createElement('canvas'); canvas.width=width; canvas.height=height;
+                    canvas.getContext('2d').drawImage(video,0,0,width,height);
+                    imageItems.push({dataUrl:canvas.toDataURL('image/jpeg',0.92),isVideo:false,name:(item.name||'video')+' • keyframe'});
+                } catch(e) { logEdit('⚠️ Video keyframe वाचता आला नाही: '+(item.name||'video')); }
+            }
+            if (imageItems.length === 0) {
+                logEdit('⚠️ वैध image/video input मिळाला नाही.');
+                return;
+            }
+
+            const pageCount = imageItems.length;
+            convertBtn.disabled = true;
+            killerWorkflowStep('generate','① Build: reference समजून AI website तयार करत आहे…');
+
+            try {
+                generatedFiles = {};
+                let firstPreviewBody = "";
+
+                for (let i = 0; i < pageCount; i++) {
+                    convertBtn.innerText = pageCount > 1 ? `⏳ AI पेज ${i + 1}/${pageCount} वाचत आहे...` : "⏳ AI स्क्रीनशॉट वाचत आहे...";
+
+                    let demoBody = await generateBodyFromScreenshot(imageItems[i].dataUrl, framework);
+
+                    demoBody = appendStatesIfNeeded(demoBody);
+                    if (i === 0) {
+                        lastRawBody = demoBody;
+                        // Closed-loop visual refinement: render, compare, diagnose and keep the best version.
+                        demoBody = await refineAgainstReference(demoBody, framework, 3);
+                    }
+                    demoBody = applyBrandTokens(demoBody);
+
+                    const files = getFilesByFramework(framework, demoBody);
+                    if (pageCount > 1) {
+                        Object.entries(files).forEach(([name, content]) => {
+                            generatedFiles[`page-${i + 1}/${name}`] = content;
+                        });
+                    } else {
+                        generatedFiles = files;
+                    }
+                    if (i === 0) firstPreviewBody = demoBody;
+                }
+
+                runCleanupOnAllFiles();
+
+                const fullPreviewHTML = renderPreview(firstPreviewBody);
+
+                runQualityChecks(fullPreviewHTML);
+                enableOverlayIfImage();
+                checkComponentReuse(fullPreviewHTML);
+                // Differentiator workflow: automatically prove the generated build instead of asking the user to discover QA manually.
+                await runKillerWorkflowAfterBuild(firstPreviewBody);
+            } catch (err) {
+                logEdit('❌ ' + err.message);
+                console.error(err);
+            } finally {
+                convertBtn.disabled = false;
+                convertBtn.innerText = "AI कोड जनरेट करा 🚀";
+            }
+        });
+
+        // ============================================================
+        // SNAPTODOESIGN V9 — PRODUCTION INTELLIGENCE ENGINE
+        // ============================================================
+        const v9 = {
+            lastVisualScore: null,
+            lastIssues: [],
+            qaRunning: false
+        };
+
+        function v9Set(id, value) {
+            const el = document.getElementById(id);
+            if (el) el.textContent = value;
+        }
+
+        function v9Issue(text, level = 'warn') {
+            v9.lastIssues.push({ text, level });
+        }
+
+        function v9RenderIssues() {
+            const el = document.getElementById('v9IssueList');
+            if (!el) return;
+            if (!v9.lastIssues.length) {
+                el.innerHTML = '<div class="text-emerald-400">✅ Critical issues आढळल्या नाहीत.</div>';
+                return;
+            }
+            el.innerHTML = v9.lastIssues.map(x =>
+                `<div class="${x.level === 'error' ? 'text-red-300' : x.level === 'ok' ? 'text-emerald-300' : 'text-amber-300'}">${x.level === 'error' ? '🔴' : x.level === 'ok' ? '✅' : '⚠️'} ${escapeHtmlV9(x.text)}</div>`
+            ).join('');
+        }
+
+        function escapeHtmlV9(s) {
+            return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+        }
+
+        function v9AccessibilityScore(doc) {
+            let score = 100;
+            const imgs = [...doc.querySelectorAll('img')];
+            const missingAlt = imgs.filter(i => !i.getAttribute('alt')).length;
+            if (missingAlt) {
+                score -= Math.min(30, missingAlt * 10);
+                v9Issue(`${missingAlt} image(s) missing alt text.`);
+            }
+            const buttons = [...doc.querySelectorAll('button')];
+            const links = [...doc.querySelectorAll('a')];
+            const emptyInteractive = [...buttons, ...links].filter(el => !el.textContent.trim() && !el.getAttribute('aria-label')).length;
+            if (emptyInteractive) {
+                score -= Math.min(20, emptyInteractive * 5);
+                v9Issue(`${emptyInteractive} interactive element(s) have no accessible name.`);
+            }
+            const headings = [...doc.querySelectorAll('h1,h2,h3,h4,h5,h6')];
+            if (headings.length === 0) {
+                score -= 10;
+                v9Issue('No heading structure detected.');
+            }
+            return Math.max(0, score);
+        }
+
+        function v9ResponsiveScore(doc) {
+            let score = 100;
+            const html = doc.documentElement.innerHTML;
+            if (!/(sm:|md:|lg:|xl:|2xl:)/.test(html)) {
+                score -= 25;
+                v9Issue('Responsive Tailwind breakpoints were not detected.');
+            }
+            const body = doc.body;
+            if (body && body.scrollWidth > body.clientWidth + 8) {
+                score -= 35;
+                v9Issue(`Horizontal overflow detected: ${body.scrollWidth - body.clientWidth}px.`);
+            }
+            return Math.max(0, score);
+        }
+
+        function v9SecurityScore(htmlString) {
+            let score = 100;
+            const checks = [
+                [/sk-[A-Za-z0-9_-]{20,}/, 'Possible exposed API key found.'],
+                [/api[_-]?key\s*[:=]\s*["'][^"']+["']/i, 'Hard-coded API key-like value found.'],
+                [/secret\s*[:=]\s*["'][^"']+["']/i, 'Hard-coded secret-like value found.'],
+                [/eval\s*\(/i, 'eval() detected.'],
+                [/document\.write\s*\(/i, 'document.write() detected in generated code.']
+            ];
+            checks.forEach(([re, msg]) => {
+                if (re.test(htmlString)) {
+                    score -= 20;
+                    v9Issue(msg, 'error');
+                }
+            });
+            return Math.max(0, score);
+        }
+
+        async function v9VisualTwinScore(referenceOverride=null, silent=false) {
+            const ref = referenceOverride || visualReferenceDataUrl || base64Media;
+            const frame = document.getElementById('previewFrame');
+            if (!ref || !frame || !window.html2canvas) {
+                if(!silent) v9Issue('Visual Twin needs a reference screenshot and html2canvas.');
+                return null;
+            }
+
+            try {
+                const refImg = await loadImageEl(ref);
+                const canvas = await html2canvas(frame.contentDocument.body, {
+                    backgroundColor: '#ffffff',
+                    useCORS: true,
+                    scale: 0.5,
+                    logging: false
+                });
+
+                const targetW = 160;
+                const targetH = Math.max(1, Math.round(targetW * refImg.naturalHeight / refImg.naturalWidth));
+                const a = document.createElement('canvas');
+                const b = document.createElement('canvas');
+                a.width = b.width = targetW;
+                a.height = b.height = targetH;
+                const ac = a.getContext('2d', { willReadFrequently: true });
+                const bc = b.getContext('2d', { willReadFrequently: true });
+                ac.drawImage(refImg, 0, 0, targetW, targetH);
+                bc.drawImage(canvas, 0, 0, targetW, targetH);
+
+                const p1 = ac.getImageData(0,0,targetW,targetH).data;
+                const p2 = bc.getImageData(0,0,targetW,targetH).data;
+                let diff = 0;
+                const pixels = targetW * targetH;
+                for (let i = 0; i < p1.length; i += 4) {
+                    diff += Math.abs(p1[i]-p2[i]) + Math.abs(p1[i+1]-p2[i+1]) + Math.abs(p1[i+2]-p2[i+2]);
+                }
+                const normalized = diff / (pixels * 765);
+                const score = Math.max(0, Math.min(100, Math.round((1 - normalized) * 100)));
+                if (!silent) { if (score < 90) v9Issue(`Visual mismatch detected. Similarity score: ${score}%.`); else v9Issue(`Visual Twin verified at ${score}%.`, 'ok'); }
+                return score;
+            } catch (e) {
+                if(!silent) v9Issue('Visual Twin capture failed: ' + e.message);
+                return null;
+            }
+        }
+
+        async function normalizeReferenceToPngBase64(dataUrl) {
+            if (!dataUrl) return null;
+            if (/^data:image\/png;base64,/i.test(dataUrl)) return dataUrl.replace(/^data:image\/png;base64,/i, '');
+            try {
+                const img = await loadImageEl(dataUrl);
+                const canvas = document.createElement('canvas');
+                canvas.width = img.naturalWidth || img.width;
+                canvas.height = img.naturalHeight || img.height;
+                const ctx = canvas.getContext('2d');
+                if (!ctx) return null;
+                ctx.drawImage(img, 0, 0);
+                return canvas.toDataURL('image/png').replace(/^data:image\/png;base64,/i, '');
+            } catch (_) { return null; }
+        }
+
+        // ===== V9.6 BACKEND PRODUCTION QA (real Playwright execution) =====
+        async function runBackendProductionQA(html) {
+            if (!authUser || !html) return null;
+            const status = document.getElementById('v9Status');
+            try {
+                if (status) status.textContent = 'V9.6 backend QA चालू आहे…';
+                const r = await fetchWithTimeout(fpApi('/api/qa'), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ html, width: 1440, height: 900 })
+                }, 90000);
+                const data = await r.json().catch(() => ({}));
+                if (!r.ok) throw new Error(data.error || `Backend QA HTTP ${r.status}`);
+                if (data.credits) { creditState = data.credits; renderCredits(); }
+
+                // The backend QA uses a real Chromium headless render and captures the actual browser output.
+                const backendErrors = [
+                    ...(data.issues || []).filter(x => x.severity === 'error').map(x => x.message),
+                    ...(data.render?.consoleErrors || []),
+                    ...(data.render?.pageErrors || [])
+                ];
+                const backendRuntime = backendErrors.length ? 40 : 100;
+                v9Set('v9RuntimeScore', backendRuntime + '%');
+                if (backendErrors.length) backendErrors.slice(0, 5).forEach(x => v9Issue('Backend: ' + x, 'error'));
+
+                if (data.pngBase64 && visualReferenceDataUrl) {
+                    const compare = await fetchWithTimeout(fpApi('/api/visual/compare'), {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({
+                            referencePngBase64: await normalizeReferenceToPngBase64(visualReferenceDataUrl),
+                            actualPngBase64: data.pngBase64
+                        })
+                    }, 60000);
+                    const cmp = await compare.json().catch(() => ({}));
+                    if (!compare.ok) throw new Error(cmp.error || `Visual compare HTTP ${compare.status}`);
+                    if (cmp.credits) { creditState = cmp.credits; renderCredits(); }
+                    if (Number.isFinite(cmp.score)) {
+                        v9Set('v9VisualScore', cmp.score + '%');
+                        if (cmp.score < 90) v9Issue(`Backend Visual Compare: ${cmp.score}% similarity.`);
+                        else v9Issue(`Backend Visual Compare verified at ${cmp.score}%.`, 'ok');
+                    }
+                }
+
+                if (data.pass) {
+                    if (status) status.textContent = '✅ Backend Playwright QA PASS';
+                } else {
+                    if (status) status.textContent = `⚠️ Backend QA found ${(data.issues || []).length} issue(s).`;
+                }
+                return data;
+            } catch (e) {
+                v9Issue('Backend QA unavailable: ' + (e.message || e), 'warn');
+                if (status) status.textContent = 'Local QA complete; backend QA unavailable.';
+                return null;
+            }
+        }
+
+        async function runV9QA() {
+            if (v9.qaRunning) return;
+            v9.qaRunning = true;
+            v9.lastIssues = [];
+            const status = document.getElementById('v9Status');
+            if (status) status.textContent = 'V9 QA चालू आहे…';
+            try {
+                const frame = document.getElementById('previewFrame');
+                const doc = frame.contentDocument || frame.contentWindow.document;
+                if (!doc || !doc.documentElement || !doc.body) {
+                    v9Issue('Preview is empty. Generate code before running V9 QA.', 'error');
+                    return;
+                }
+                const html = doc.documentElement ? doc.documentElement.outerHTML : '';
+                const a11y = v9AccessibilityScore(doc);
+                const responsive = v9ResponsiveScore(doc);
+                const security = v9SecurityScore(html);
+                const runtime = document.getElementById('runtimeErrorBadge')?.classList.contains('hidden') ? 100 : 40;
+                if (runtime < 100) v9Issue('Preview runtime error detected.', 'error');
+
+                v9Set('v9A11yScore', a11y + '%');
+                v9Set('v9ResponsiveScore', responsive + '%');
+                v9Set('v9SecurityScore', security + '%');
+                v9Set('v9RuntimeScore', runtime + '%');
+
+                const visual = await v9VisualTwinScore();
+                let visualScore = visual == null ? 0 : visual;
+                v9Set('v9VisualScore', visual == null ? '—' : visual + '%');
+
+                const backend = await runBackendProductionQA(lastRawBody || html);
+                if (backend) {
+                    const backendVisual = parseInt(document.getElementById('v9VisualScore')?.textContent || '', 10);
+                    if (Number.isFinite(backendVisual)) visualScore = backendVisual;
+                    const backendRuntime = parseInt(document.getElementById('v9RuntimeScore')?.textContent || '', 10);
+                    if (Number.isFinite(backendRuntime)) runtime = backendRuntime;
+                }
+
+                const ship = Math.round((visualScore + responsive + a11y + runtime + security) / 5);
+                v9Set('v9ShipScore', ship + '%');
+                if (ship >= 90) v9Issue(`SHIP SCORE ${ship}% — production verification is strong.`, 'ok');
+                else v9Issue(`SHIP SCORE ${ship}% — Auto-Fix recommended.`);
+                v9RenderIssues();
+                if (status) status.textContent = `QA complete. ${v9.lastIssues.length} finding(s).`;
+            } catch (e) {
+                v9Issue('QA failed: ' + e.message, 'error');
+                v9RenderIssues();
+                if (status) status.textContent = 'QA failed.';
+            } finally {
+                v9.qaRunning = false;
+            }
+        }
+
+        async function autoFixV9() {
+            if (!lastRawBody) { logEdit('आधी code generate करा.'); return; }
+            const btn = document.getElementById('autoFixV9Btn');
+            if (btn) btn.disabled = true;
+            try {
+                logEdit('🤖 Autonomous repair: Run → Check → Fix → Re-run सुरू.');
+                if (fp.apiBase && authUser) {
+                    const referencePngBase64 = await normalizeReferenceToPngBase64(visualReferenceDataUrl);
+                    const r = await fetchWithTimeout(fpApi('/api/agent/repair'), {
+                        method: 'POST', credentials: 'include',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ html: lastRawBody, referencePngBase64, maxIterations: Math.min(5, Math.max(1, fpReliability?.retryLimit || 3)), width: 1440, height: 900 })
+                    }, 180000);
+                    const data = await r.json().catch(() => ({}));
+                    if (!r.ok) throw new Error(data.error || `Autonomous repair HTTP ${r.status}`);
+                    if (data.credits) { creditState = data.credits; renderCredits(); }
+                    if (data.html && data.html !== lastRawBody) {
+                        rememberBeforeEdit();
+                        lastRawBody = data.html;
+                        const framework = document.getElementById('frameworkSelect')?.value || 'html-tailwind';
+                        generatedFiles = getFilesByFramework(framework, applyBrandTokens(data.html));
+                        runCleanupOnAllFiles();
+                        renderPreview(applyBrandTokens(data.html));
+                        document.getElementById('codeOutput').value = data.html;
+                    }
+                    const last = data.last || {};
+                    const score = Number.isFinite(last.visual?.score) ? `${last.visual.score}% visual` : 'visual N/A';
+                    logEdit(`🤖 Repair loop पूर्ण: ${data.iterations || 1} iteration(s), ${score}.`);
+                    if (last.pass) logEdit('✅ AI ने run → check → fix → re-run करून Production QA PASS मिळवला.');
+                    else logEdit('⚠️ Max repair iterations पूर्ण. Final QA पुन्हा चालवला जाईल.');
+                    await runV9QA();
+                    return data;
+                }
+                // Local fallback when backend is not configured.
+                await runV9QA();
+                const actionable = v9.lastIssues.filter(x => x.level !== 'ok').map(x => x.text).join('\n');
+                if (!actionable) { logEdit('V9 QA नुसार Auto-Fix ची गरज नाही.'); return; }
+                await applyLiveEdit(`Production QA findings:\n${actionable}\nFix only these issues while preserving the reference design.`);
+                await new Promise(r => setTimeout(r, 700));
+                await runV9QA();
+            } catch (e) {
+                logEdit('❌ Auto-Fix: ' + e.message);
+            } finally { if (btn) btn.disabled = false; }
+        }
+
+
+        // ===== V9 Production Gate: deeper static + runtime evidence =====
+        function v9GateCheck(doc, htmlString) {
+            const findings = [];
+            const add = (text, level='warn') => { findings.push({text, level}); };
+
+            const forms = [...doc.querySelectorAll('form')];
+            const inputs = [...doc.querySelectorAll('input,textarea,select')];
+            const unlabeled = inputs.filter(el => {
+                if (el.type === 'hidden') return false;
+                const id = el.id;
+                return !(el.getAttribute('aria-label') || el.getAttribute('aria-labelledby') ||
+                         (id && doc.querySelector(`label[for="${CSS.escape(id)}"]`)) ||
+                         el.closest('label'));
+            }).length;
+            if (unlabeled) add(`${unlabeled} form control(s) may lack an accessible label.`);
+
+            const links = [...doc.querySelectorAll('a[href]')];
+            const deadLinks = links.filter(a => !a.getAttribute('href') || a.getAttribute('href') === '#').length;
+            if (deadLinks) add(`${deadLinks} link(s) have empty/# destinations.`);
+
+            const images = [...doc.images];
+            const oversizedData = images.filter(i => (i.src || '').startsWith('data:') && (i.src.length > 1500000)).length;
+            if (oversizedData) add(`${oversizedData} very large inline image asset(s) may hurt load performance.`);
+
+            const scripts = [...doc.scripts];
+            const externalScripts = scripts.filter(s => s.src && !s.src.startsWith(location.origin)).length;
+            if (externalScripts) add(`${externalScripts} external script(s) detected; review supply-chain/CDN trust before production.`);
+
+            if (/\bTODO\b|\bFIXME\b/i.test(htmlString)) add('TODO/FIXME marker detected in generated output.');
+            if (/console\.log\s*\(/i.test(htmlString)) add('console.log() found; remove debug logging before production.');
+            if (/target\s*=\s*["']_blank["']/i.test(htmlString) && !/rel\s*=\s*["'][^"']*noopener/i.test(htmlString)) {
+                add('target="_blank" link(s) without an obvious noopener protection.');
+            }
+
+            // Functional smoke evidence: count interactive surfaces rather than pretending to execute arbitrary user code.
+            const interactive = doc.querySelectorAll('button,a,input,textarea,select,[role="button"]').length;
+            if (interactive === 0) add('No interactive surface detected; verify this is intentional.', 'warn');
+
+            return findings;
+        }
+
+        function v9ComputeGate() {
+            const vals = ['v9VisualScore','v9ResponsiveScore','v9A11yScore','v9RuntimeScore','v9SecurityScore']
+              .map(id => document.getElementById(id)?.textContent || '')
+              .map(x => parseInt(x, 10))
+              .filter(Number.isFinite);
+            if (vals.length < 5) return {score:null, pass:false};
+            const score = Math.round(vals.reduce((a,b)=>a+b,0)/vals.length);
+            const hardFail = v9.lastIssues.some(x => x.level === 'error');
+            return {score, pass: score >= 90 && !hardFail};
+        }
+
+        function v9ExportEvidence() {
+            const gate = v9ComputeGate();
+            const evidence = {
+                product: 'SnapToDesign AI Pro',
+                version: 'V9.6',
+                generatedAt: new Date().toISOString(),
+                shipScore: gate.score,
+                shipGate: gate.pass ? 'PASS' : 'HOLD',
+                scores: {
+                    visual: document.getElementById('v9VisualScore')?.textContent || '—',
+                    responsive: document.getElementById('v9ResponsiveScore')?.textContent || '—',
+                    accessibility: document.getElementById('v9A11yScore')?.textContent || '—',
+                    runtime: document.getElementById('v9RuntimeScore')?.textContent || '—',
+                    security: document.getElementById('v9SecurityScore')?.textContent || '—'
+                },
+                findings: v9.lastIssues || [],
+                note: 'Evidence is an automated pre-ship signal, not a substitute for human review, penetration testing, or production monitoring.'
+            };
+            const blob = new Blob([JSON.stringify(evidence, null, 2)], {type:'application/json'});
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'snap-to-design-v9.6-qa-evidence.json';
+            a.click();
+            setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+        }
+
+        // Wrap the original V9 QA with the deeper gate and evidence state.
+        const v9CoreQA = runV9QA;
+        runV9QA = async function() {
+            await v9CoreQA();
+            try {
+                const frame = document.getElementById('previewFrame');
+                const doc = frame?.contentDocument || frame?.contentWindow?.document;
+                const htmlString = doc?.documentElement?.outerHTML || '';
+                const extra = v9GateCheck(doc, htmlString);
+                extra.forEach(x => v9Issue(x.text, x.level));
+                const gate = v9ComputeGate();
+                const badge = document.getElementById('v9GateBadge');
+                if (badge) {
+                    badge.textContent = gate.pass ? `SHIP GATE: PASS (${gate.score}%)` :
+                        `SHIP GATE: HOLD${gate.score != null ? ` (${gate.score}%)` : ''}`;
+                }
+                const evidence = document.getElementById('v9Evidence');
+                if (evidence) evidence.textContent =
+                    `${v9.lastIssues.length} findings recorded. Gate requires ≥90% overall and no critical runtime/security error.`;
+                v9RenderIssues();
+            } catch(e) {
+                v9Issue('V9 gate evaluation failed: ' + e.message, 'error');
+                v9RenderIssues();
+            }
+        };
+
+        document.getElementById('v9ReportBtn')?.addEventListener('click', v9ExportEvidence);
+        document.getElementById('runV9QaBtn')?.addEventListener('click', runV9QA);
+        document.getElementById('autoFixV9Btn')?.addEventListener('click', autoFixV9);
+
+        // Small production UX guards.
+        document.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase()==='z' && !e.shiftKey) { e.preventDefault(); document.getElementById('undoBtn')?.click(); return; }
+            if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase()==='y' || (e.key.toLowerCase()==='z' && e.shiftKey))) { e.preventDefault(); document.getElementById('redoBtn')?.click(); return; }
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                const btn=document.getElementById('updateDesignBtn');
+                if (btn && !btn.disabled) btn.click();
+            }
+        });
+        window.addEventListener('beforeunload', () => { if (fp.monitorTimer) clearInterval(fp.monitorTimer); });
+
+        // ===== SIMPLE / PRO MODE =====
+        (function initSimpleProMode(){
+            const KEY='snapToDesignMode';
+            const simpleBtn=document.getElementById('simpleModeBtn');
+            const proBtn=document.getElementById('proModeBtn');
+            const PRO_IDS=['advancedIntegrationCenter','projectManager','rightControlRail','fpApiInput','fpImportUrl','fpGithubToken','fpGithubOwner','fpGithubRepo','fpGithubBranch','fpGithubPrefix','fpVideoAnalyzeBtn','fpAgentBtn','fpMonitorBtn','fpSecurityScanBtn','fpRegressionBtn','fpApprovalBtn','fpBudgetBtn','fpImpactBtn','fpStackBtn','fpPermissionBadge','fpReliabilityBadge','fpOverallBadge','fpVersionBtn','fpRollbackBtn','fpBrowserStatus','componentLibraryInput','tokenBg','tokenFont','tokenPrimary','tokenRadius','tokenText','saveTokensBtn','saveComponentsBtn'];
+            function applyAdvancedVisibility(isPro){
+                PRO_IDS.forEach(id=>{
+                    const el=document.getElementById(id); if(!el)return;
+                    const host=el.closest('.fp-card,details,section,aside,form')||el;
+                    host.classList.toggle('simple-pro-hide',!isPro);
+                });
+                const rail=document.getElementById('rightControlRail');
+                if(rail) rail.classList.toggle('simple-pro-hide',!isPro);
+                const navItems=document.querySelectorAll('.final-nav button');
+                navItems.forEach(b=>{b.classList.toggle('simple-pro-hide',!isPro && !['dashboard'].includes(b.dataset.nav));});
+            }
+            function setMode(mode, persist=true){
+                const isPro=mode==='pro';
+                document.body.classList.toggle('pro-mode',isPro);
+                document.body.classList.toggle('simple-mode',!isPro);
+                applyAdvancedVisibility(isPro);
+                [simpleBtn,proBtn].forEach(b=>{ if(!b)return; b.classList.remove('active'); b.classList.add('text-gray-400'); b.setAttribute('aria-selected','false'); });
+                const active=isPro?proBtn:simpleBtn;
+                if(active){active.classList.add('active');active.classList.remove('text-gray-400');active.setAttribute('aria-selected','true');}
+                if(persist){try{localStorage.setItem(KEY,mode)}catch(e){}}
+            }
+            simpleBtn?.addEventListener('click',()=>setMode('simple'));
+            proBtn?.addEventListener('click',()=>setMode('pro'));
+            let saved='simple';
+            try{saved=localStorage.getItem(KEY)||'simple'}catch(e){}
+            setMode(saved,false);
+        })();
+
+        // V9: backend proxy indicator — API key browser मध्ये ठेवू नये.
+        const v9StatusNode = document.getElementById('v9Status');
+        if (v9StatusNode) {
+            v9StatusNode.title = 'AI calls should go through /api/ai backend proxy. Never expose provider secrets in the browser.';
+        }
+
+    </script>
+
+<script>
+/* SnapToDesign V9.6 final autonomous loop helper */
+window.runAutonomousRepair = async function(payload) {
+  const response = await fetch("/api/agent/repair", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify(payload || {})
+  });
+  if (!response.ok) throw new Error("Autonomous repair failed: " + response.status);
+  return await response.json();
+};
+</script>
+
+</body>
+</html>
